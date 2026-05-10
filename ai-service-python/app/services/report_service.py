@@ -1,7 +1,7 @@
 """Report generation service orchestrator."""
 
+import uuid
 from typing import Any, Dict, List, Optional
-from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,13 +19,13 @@ class ReportService:
 
     async def generate(
         self,
-        tenant_id: UUID,
-        user_id: UUID,
+        tenant_id: int,
+        user_id: int,
         title: str,
-        dataset_ids: List[UUID],
+        dataset_ids: List[int],
         description: Optional[str] = None,
-        kpi_ids: Optional[List[UUID]] = None,
-        template_id: Optional[UUID] = None,
+        kpi_ids: Optional[List[int]] = None,
+        template_id: Optional[int] = None,
         analysis_queries: Optional[List[str]] = None,
         output_format: str = "markdown",
         date_range: Optional[Dict[str, str]] = None,
@@ -55,7 +55,7 @@ class ReportService:
             graph = create_report_graph(self.db)
             final_state = await graph.ainvoke(initial_state)
 
-            report_id = uuid4()
+            report_id = uuid.uuid4()
 
             await self.trace_service.update_trace(
                 trace_id=trace.id,

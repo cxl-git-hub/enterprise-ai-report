@@ -40,10 +40,10 @@ async def retrieve_data(state: AnalysisState, db: AsyncSession) -> Dict[str, Any
             return {"error_message": f"Failed to execute SQL: {str(e)}"}
 
     # Build a simple SELECT for the datasets
-    from uuid import UUID
+    
     query = select(Dataset).where(Dataset.tenant_id == tenant_id)
     if dataset_ids:
-        query = query.where(Dataset.id.in_([UUID(d) for d in dataset_ids]))
+        query = query.where(Dataset.id.in_([int(d) for d in dataset_ids]))
 
     result = await db.execute(query)
     datasets = list(result.scalars().all())
@@ -72,10 +72,10 @@ async def inject_schema_context(state: AnalysisState, db: AsyncSession) -> Dict[
     tenant_id = state["tenant_id"]
     dataset_ids = state.get("dataset_ids", [])
 
-    from uuid import UUID
+    
     query = select(Dataset).where(Dataset.tenant_id == tenant_id)
     if dataset_ids:
-        query = query.where(Dataset.id.in_([UUID(d) for d in dataset_ids]))
+        query = query.where(Dataset.id.in_([int(d) for d in dataset_ids]))
 
     result = await db.execute(query)
     datasets = list(result.scalars().all())

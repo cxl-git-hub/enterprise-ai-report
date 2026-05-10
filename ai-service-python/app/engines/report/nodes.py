@@ -27,7 +27,7 @@ async def aggregate_kpi_data(state: ReportState, db: AsyncSession) -> Dict[str, 
     dataset_ids = state.get("dataset_ids", [])
     date_range = state.get("date_range")
 
-    from uuid import UUID
+    
 
     kpi_data = {}
     kpi_parts = []
@@ -35,7 +35,7 @@ async def aggregate_kpi_data(state: ReportState, db: AsyncSession) -> Dict[str, 
     # Fetch KPIs
     kpi_query = select(KPIDefinition).where(KPIDefinition.tenant_id == tenant_id)
     if kpi_ids:
-        kpi_query = kpi_query.where(KPIDefinition.id.in_([UUID(k) for k in kpi_ids]))
+        kpi_query = kpi_query.where(KPIDefinition.id.in_([int(k) for k in kpi_ids]))
 
     result = await db.execute(kpi_query)
     kpis = list(result.scalars().all())
@@ -93,7 +93,7 @@ async def compile_analysis_results(state: ReportState, db: AsyncSession) -> Dict
     dataset_ids = state.get("dataset_ids", [])
     analysis_queries = state.get("analysis_queries", [])
 
-    from uuid import UUID
+    
 
     data_parts = []
     analysis_results = []
@@ -112,7 +112,7 @@ async def compile_analysis_results(state: ReportState, db: AsyncSession) -> Dict
     # Get dataset summaries
     query = select(Dataset).where(Dataset.tenant_id == tenant_id)
     if dataset_ids:
-        query = query.where(Dataset.id.in_([UUID(d) for d in dataset_ids]))
+        query = query.where(Dataset.id.in_([int(d) for d in dataset_ids]))
 
     result = await db.execute(query)
     datasets = list(result.scalars().all())
@@ -139,10 +139,10 @@ async def select_template(state: ReportState, db: AsyncSession) -> Dict[str, Any
     template_context = ""
 
     if template_id:
-        from uuid import UUID
+        
         result = await db.execute(
             select(ReportTemplate).where(
-                ReportTemplate.id == UUID(template_id),
+                ReportTemplate.id == int(template_id),
                 ReportTemplate.tenant_id == tenant_id,
             )
         )

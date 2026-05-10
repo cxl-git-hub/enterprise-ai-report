@@ -1,7 +1,6 @@
 """Data analysis service orchestrator."""
 
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,10 +18,10 @@ class AnalysisService:
 
     async def execute(
         self,
-        tenant_id: UUID,
-        user_id: UUID,
+        tenant_id: int,
+        user_id: int,
         query: str,
-        dataset_ids: List[UUID],
+        dataset_ids: List[int],
         sql: Optional[str] = None,
         analysis_type: str = "general",
         output_format: str = "json",

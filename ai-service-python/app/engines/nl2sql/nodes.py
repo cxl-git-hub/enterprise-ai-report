@@ -27,10 +27,9 @@ async def get_schema_context(state: NL2SQLState, db: AsyncSession) -> Dict[str, 
     dataset_ids = state.get("dataset_ids", [])
 
     # Fetch datasets
-    query = select(Dataset).where(Dataset.tenant_id == tenant_id)
+    query = select(Dataset).where(Dataset.tenant_id == int(tenant_id))
     if dataset_ids:
-        from uuid import UUID
-        query = query.where(Dataset.id.in_([UUID(d) for d in dataset_ids]))
+        query = query.where(Dataset.id.in_([int(d) for d in dataset_ids]))
 
     result = await db.execute(query)
     datasets = list(result.scalars().all())
@@ -81,9 +80,7 @@ async def get_schema_context(state: NL2SQLState, db: AsyncSession) -> Dict[str, 
 
 async def check_policy(state: NL2SQLState, db: AsyncSession) -> Dict[str, Any]:
     """Check AI policy before SQL generation."""
-    from uuid import UUID
-
-    tenant_id = UUID(state["tenant_id"])
+    tenant_id = int(state["tenant_id"])
     policy_service = AIPolicyService(db)
 
     # Check if SQL generation is allowed
