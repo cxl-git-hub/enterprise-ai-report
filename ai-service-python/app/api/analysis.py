@@ -11,7 +11,7 @@ from app.services.analysis_service import AnalysisService
 router = APIRouter()
 
 
-@router.post("/analysis", response_model=ApiResponse)
+@router.post("/analysis")
 async def analyze_data(
     request: AnalysisRequest,
     tenant: dict = Depends(get_tenant),
@@ -30,11 +30,6 @@ async def analyze_data(
     )
 
     if not result.get("success"):
-        return ApiResponse(
-            success=False,
-            message=result.get("error", "Analysis failed"),
-            error_code="ANALYSIS_ERROR",
-            data=result,
-        )
+        return ApiResponse(code=500, message=result.get("error", "Analysis failed"), data=result)
 
     return ApiResponse(data=result)

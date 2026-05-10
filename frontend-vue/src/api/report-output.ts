@@ -18,9 +18,9 @@ export interface ReportOutput {
 
 export const reportOutputApi = {
   list: (params: { page: number; pageSize: number; keyword?: string; format?: string }) =>
-    get<{ data: { items: ReportOutput[]; total: number } }>('/reports', params),
-  detail: (id: string) => get<{ data: ReportOutput }>(`/reports/${id}`),
+    get<{ data: { items: ReportOutput[]; total: number } }>('/report-outputs', params),
+  detail: (id: string) => get<{ data: ReportOutput }>(`/report-outputs/${id}`),
   download: (id: string) => {
-    return instance.get(`/reports/${id}/download`, { responseType: 'blob' })
+    return instance.get(`/report-outputs/${id}/download`, { responseType: 'blob' })
   },
 }

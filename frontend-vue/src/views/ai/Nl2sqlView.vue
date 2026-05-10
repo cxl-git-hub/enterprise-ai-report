@@ -213,8 +213,8 @@ async function handleGenerate() {
   generating.value = true
   try {
     const res = await post<{ data: { sql: string; trace: unknown } }>('/ai/nl2sql', {
-      question: naturalQuery.value,
-      schemaId: selectedSchemaId.value,
+      query: naturalQuery.value,
+      dataset_ids: selectedSchemaId.value ? [selectedSchemaId.value] : undefined,
     })
     generatedSql.value = res.data.sql
     if (res.data.trace) {

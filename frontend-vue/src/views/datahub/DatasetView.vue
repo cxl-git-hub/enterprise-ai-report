@@ -58,15 +58,15 @@
             :data-source="record.columns || []"
             :pagination="false"
             size="small"
-            row-key="name"
+            row-key="columnName"
           >
             <template #bodyCell="{ column: col, record: colRecord }">
               <template v-if="col.key === 'isPrimaryKey'">
                 <a-tag v-if="colRecord.isPrimaryKey" color="gold">PK</a-tag>
               </template>
-              <template v-if="col.key === 'nullable'">
-                <a-tag :color="colRecord.nullable ? 'default' : 'red'">
-                  {{ colRecord.nullable ? '可空' : '非空' }}
+              <template v-if="col.key === 'isNullable'">
+                <a-tag :color="colRecord.isNullable ? 'default' : 'red'">
+                  {{ colRecord.isNullable ? '可空' : '非空' }}
                 </a-tag>
               </template>
             </template>
@@ -183,9 +183,9 @@ const columns = [
 ]
 
 const columnColumns = [
-  { title: '列名', dataIndex: 'name', key: 'name' },
-  { title: '类型', dataIndex: 'type', key: 'type' },
-  { title: '可空', dataIndex: 'nullable', key: 'nullable', width: 80 },
+  { title: '列名', dataIndex: 'columnName', key: 'columnName' },
+  { title: '类型', dataIndex: 'columnType', key: 'columnType' },
+  { title: '可空', dataIndex: 'isNullable', key: 'isNullable', width: 80 },
   { title: '主键', dataIndex: 'isPrimaryKey', key: 'isPrimaryKey', width: 80 },
   { title: '描述', dataIndex: 'description', key: 'description' },
 ]

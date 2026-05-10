@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -34,7 +36,7 @@ public class DatasetServiceImpl extends ServiceImpl<DatasetMapper, Dataset> impl
         return columnMapper.selectList(
                 new LambdaQueryWrapper<DatasetColumn>()
                         .eq(DatasetColumn::getDatasetId, datasetId)
-                        .orderByAsc(DatasetColumn::getSort));
+                        .orderByAsc(DatasetColumn::getSortOrder));
     }
 
     @Override
@@ -65,15 +67,13 @@ public class DatasetServiceImpl extends ServiceImpl<DatasetMapper, Dataset> impl
                     int sort = 0;
                     while (rs.next()) {
                         DatasetColumn column = new DatasetColumn();
-                        column.setTenantId(dataset.getTenantId());
                         column.setDatasetId(datasetId);
-                        column.setName(rs.getString("COLUMN_NAME"));
+                        column.setColumnName(rs.getString("COLUMN_NAME"));
                         column.setDisplayName(rs.getString("COLUMN_NAME"));
-                        column.setDataType(rs.getString("TYPE_NAME"));
-                        column.setLength(rs.getInt("COLUMN_SIZE"));
-                        column.setNullable(rs.getInt("NULLABLE"));
+                        column.setColumnType(rs.getString("TYPE_NAME"));
+                        column.setIsNullable(rs.getInt("NULLABLE"));
                         column.setDescription(rs.getString("REMARKS"));
-                        column.setSort(sort++);
+                        column.setSortOrder(sort++);
                         columns.add(column);
                     }
                 }
@@ -90,5 +90,49 @@ public class DatasetServiceImpl extends ServiceImpl<DatasetMapper, Dataset> impl
 
         dataset.setLastSyncAt(java.time.LocalDateTime.now());
         updateById(dataset);
+    }
+
+    @Override
+    public Map<String, Object> preview(Long datasetId, Integer limit) {
+        Dataset dataset = getById(datasetId);
+        if (dataset == null) {
+            throw new BusinessException(404, "Dataset not found");
+        }
+
+        DataSource dataSource = dataSourceMapper.selectById(dataset.getDataSourceId());
+        if (dataSource == null) {
+            throw new BusinessException(404, "DataSource not found");
+        }
+
+        List<String> columns = new ArrayList<>();
+        List<Map<String, Object>> rows = new ArrayList<>();
+
+        try {
+            String password = EncryptionUtil.decrypt(dataSource.getEncryptedPassword());
+            try (Connection conn = DriverManager.getConnection(dataSource.getConnectionUrl(), dataSource.getUsername(), password)) {
+                String sql = "SELECT * FROM " + dataset.getTableName() + " LIMIT " + limit;
+                try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                    ResultSetMetaData meta = rs.getMetaData();
+                    int colCount = meta.getColumnCount();
+                    for (int i = 1; i <= colCount; i++) {
+                        columns.add(meta.getColumnName(i));
+                    }
+                    while (rs.next()) {
+                        Map<String, Object> row = new HashMap<>();
+                        for (int i = 1; i <= colCount; i++) {
+                            row.put(meta.getColumnName(i), rs.getObject(i));
+                        }
+                        rows.add(row);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new BusinessException(500, "Failed to preview data: " + e.getMessage());
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("columns", columns);
+        result.put("rows", rows);
+        return result;
     }
 }

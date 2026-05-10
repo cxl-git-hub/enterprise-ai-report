@@ -21,13 +21,13 @@ public class AiTraceController {
     public ApiResponse<PageResult<AiExecutionTrace>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) String operationType,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(required = false) String aiTaskType,
+            @RequestParam(required = false) String status) {
         LambdaQueryWrapper<AiExecutionTrace> wrapper = new LambdaQueryWrapper<>();
-        if (operationType != null && !operationType.isEmpty()) {
-            wrapper.eq(AiExecutionTrace::getOperationType, operationType);
+        if (aiTaskType != null && !aiTaskType.isEmpty()) {
+            wrapper.eq(AiExecutionTrace::getAiTaskType, aiTaskType);
         }
-        if (status != null) {
+        if (status != null && !status.isEmpty()) {
             wrapper.eq(AiExecutionTrace::getStatus, status);
         }
         wrapper.orderByDesc(AiExecutionTrace::getCreatedAt);

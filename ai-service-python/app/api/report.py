@@ -11,7 +11,7 @@ from app.services.report_service import ReportService
 router = APIRouter()
 
 
-@router.post("/report/generate", response_model=ApiResponse)
+@router.post("/report/generate")
 async def generate_report(
     request: ReportGenerateRequest,
     tenant: dict = Depends(get_tenant),
@@ -33,11 +33,6 @@ async def generate_report(
     )
 
     if not result.get("success"):
-        return ApiResponse(
-            success=False,
-            message=result.get("error", "Report generation failed"),
-            error_code="REPORT_ERROR",
-            data=result,
-        )
+        return ApiResponse(code=500, message=result.get("error", "Report generation failed"), data=result)
 
     return ApiResponse(data=result)

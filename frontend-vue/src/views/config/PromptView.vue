@@ -81,7 +81,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="分类" name="category">
-              <a-select v-model:value="formState.category" placeholder="请选择分类">
+              <a-select v-model:value="formState.promptType" placeholder="请选择分类">
                 <a-select-option value="nl2sql">NL2SQL</a-select-option>
                 <a-select-option value="analysis">分析</a-select-option>
                 <a-select-option value="report">报表</a-select-option>
@@ -97,7 +97,7 @@
           <template #tooltip><span>支持 {{variable}} 格式的变量占位符</span></template>
           <div class="code-editor">
             <a-textarea
-              v-model:value="formState.template"
+              v-model:value="formState.templateContent"
               :rows="10"
               placeholder="你是一个SQL专家。请根据以下Schema信息，将用户的自然语言查询转换为SQL。&#10;&#10;Schema:&#10;{{schema}}&#10;&#10;用户问题: {{question}}&#10;&#10;请生成SQL:"
               style="font-family: monospace; font-size: 13px; line-height: 1.6"
@@ -188,7 +188,7 @@ function truncate(str: string, len: number) {
 
 function openCreateModal() {
   editingId.value = null
-  Object.assign(formState, { name: '', description: '', template: '', variables: [], category: 'general' })
+  Object.assign(formState, { name: '', description: '', templateContent: '', variables: '', schemaId: '' })
   openModal()
 }
 
@@ -207,11 +207,11 @@ function aiSuggestTemplate() {
   post<{ data: { template: string; explanation: string } }>('/ai/optimize-prompt', {
     name: formState.name,
     description: formState.description,
-    category: formState.category,
-    currentTemplate: formState.template,
+    category: formState.promptType,
+    current_template: formState.templateContent,
   }).then((res) => {
     if (res?.data?.template) {
-      formState.template = res.data.template
+      formState.templateContent = res.data.template
       // Auto-extract variables
       const matches = res.data.template.match(/\{\{(\w+)\}\}/g)
       if (matches) {
@@ -229,7 +229,7 @@ function aiSuggestTemplate() {
 async function handleSubmit() {
   await formRef.value?.validateFields()
   // Auto-extract variables from template
-  const matches = formState.template.match(/\{\{(\w+)\}\}/g)
+  const matches = formState.templateContent.match(/\{\{(\w+)\}\}/g)
   if (matches) {
     formState.variables = [...new Set(matches.map((m: string) => m.replace(/[{}]/g, '')))]
   }

@@ -5,7 +5,7 @@
     <a-card :bordered="false" class="page-card">
       <a-form layout="inline" :model="searchParams" class="search-bar" @finish="search">
         <a-form-item>
-          <a-select v-model:value="searchParams.traceType" placeholder="追踪类型" allow-clear style="width: 150px">
+          <a-select v-model:value="searchParams.aiTaskType" placeholder="追踪类型" allow-clear style="width: 150px">
             <a-select-option value="nl2sql">NL2SQL</a-select-option>
             <a-select-option value="analysis">分析</a-select-option>
             <a-select-option value="report">报表生成</a-select-option>
@@ -15,6 +15,7 @@
           <a-select v-model:value="searchParams.status" placeholder="状态" allow-clear style="width: 120px">
             <a-select-option value="success">成功</a-select-option>
             <a-select-option value="failed">失败</a-select-option>
+            <a-select-option value="pending">待处理</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item>
@@ -32,15 +33,15 @@
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'traceType'">
-            <a-tag :color="typeColor[record.traceType] || 'default'">
-              {{ typeLabel[record.traceType] || record.traceType }}
+          <template v-if="column.key === 'aiTaskType'">
+            <a-tag :color="typeColor[record.aiTaskType] || 'default'">
+              {{ typeLabel[record.aiTaskType] || record.aiTaskType }}
             </a-tag>
           </template>
           <template v-if="column.key === 'status'">
             <a-badge
-              :status="record.status === 'success' ? 'success' : 'error'"
-              :text="record.status === 'success' ? '成功' : '失败'"
+              :status="record.status === 'success' ? 'success' : record.status === 'failed' ? 'error' : 'processing'"
+              :text="record.status === 'success' ? '成功' : record.status === 'failed' ? '失败' : '待处理'"
             />
           </template>
           <template v-if="column.key === 'totalTokens'">
@@ -49,8 +50,8 @@
           <template v-if="column.key === 'cost'">
             ${{ (record.cost || 0).toFixed(4) }}
           </template>
-          <template v-if="column.key === 'duration'">
-            {{ record.duration }}ms
+          <template v-if="column.key === 'latencyMs'">
+            {{ record.latencyMs }}ms
           </template>
           <template v-if="column.key === 'action'">
             <router-link :to="`/ai/traces/${record.id}`">
@@ -83,18 +84,18 @@ const typeLabel: Record<string, string> = {
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =
   useTable<AiTrace>({
-    fetchApi: (params) => aiTraceApi.list(params as { page: number; pageSize: number; traceType?: string; status?: string }),
+    fetchApi: (params) => aiTraceApi.list(params as { page: number; pageSize: number; aiTaskType?: string; status?: string }),
   })
 
 const columns = [
-  { title: '追踪类型', dataIndex: 'traceType', key: 'traceType', width: 120 },
+  { title: '追踪类型', dataIndex: 'aiTaskType', key: 'aiTaskType', width: 120 },
   { title: '模型', dataIndex: 'modelName', key: 'modelName', width: 150 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: 'Prompt Tokens', dataIndex: 'promptTokens', key: 'promptTokens', width: 120 },
   { title: 'Completion Tokens', dataIndex: 'completionTokens', key: 'completionTokens', width: 140 },
   { title: '总Tokens', dataIndex: 'totalTokens', key: 'totalTokens', width: 120 },
   { title: '费用', dataIndex: 'cost', key: 'cost', width: 100 },
-  { title: '耗时', dataIndex: 'duration', key: 'duration', width: 100 },
+  { title: '耗时', dataIndex: 'latencyMs', key: 'latencyMs', width: 100 },
   { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
   { title: '操作', key: 'action', width: 100, fixed: 'right' as const },
 ]

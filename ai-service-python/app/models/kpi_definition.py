@@ -1,9 +1,7 @@
 """KPI definition model."""
 
-import uuid
-from sqlalchemy import String, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, Integer, BigInteger, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -11,33 +9,21 @@ from app.models.base import BaseModel
 class KPIDefinition(BaseModel):
     """KPI (Key Performance Indicator) definition."""
 
-    __tablename__ = "kpi_definitions"
+    __tablename__ = "kpi_definition"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    dataset_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("datasets.id"),
-        nullable=False,
-        index=True,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    display_name: Mapped[str] = mapped_column(String(255), nullable=True)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    aggregation_type: Mapped[str] = mapped_column(String(50), nullable=False)  # sum, avg, count, etc.
-    column_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    formula: Mapped[str] = mapped_column(Text, nullable=True)  # Custom SQL formula
-    filters: Mapped[dict] = mapped_column(JSONB, nullable=True)
-    unit: Mapped[str] = mapped_column(String(50), nullable=True)
-
-    # Relationships
-    dataset = relationship("Dataset", back_populates="kpi_definitions", lazy="selectin")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    kpi_code: Mapped[str] = mapped_column(String(128), nullable=False)
+    kpi_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    schema_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    kpi_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    expression: Mapped[str] = mapped_column(Text, nullable=False)
+    dimensions: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    filters: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    unit: Mapped[str] = mapped_column(String(32), nullable=True)
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
+    business_explanation: Mapped[str] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=True)

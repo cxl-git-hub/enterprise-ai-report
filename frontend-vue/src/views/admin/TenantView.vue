@@ -2,7 +2,7 @@
   <div class="page-container">
     <PageHeader title="租户管理" subtitle="管理系统租户">
       <template #actions>
-        <a-button type="primary" @click="openModal()">
+        <a-button type="primary" @click="openCreateModal">
           <PlusOutlined /> 新建租户
         </a-button>
       </template>
@@ -37,13 +37,13 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
             <a-badge
-              :status="record.status === 1 || record.status === 'active' ? 'success' : 'default'"
-              :text="record.status === 1 || record.status === 'active' ? '启用' : '禁用'"
+              :status="record.status === 1 ? 'success' : 'default'"
+              :text="record.status === 1 ? '启用' : '禁用'"
             />
           </template>
           <template v-if="column.key === 'action'">
             <div class="table-actions">
-              <a-button type="link" size="small" @click="openModal(record.id)">编辑</a-button>
+              <a-button type="link" size="small" @click="openEditModal(record)">编辑</a-button>
               <ConfirmDelete @confirm="handleDelete(record.id)">
                 <a-button type="link" size="small" danger>删除</a-button>
               </ConfirmDelete>
@@ -55,56 +55,60 @@
 
     <!-- Create/Edit Modal -->
     <a-modal
-      v-model:open="visible"
+      v-model:open="modalVisible"
       :title="editingId ? '编辑租户' : '新建租户'"
       :confirm-loading="confirmLoading"
       @ok="handleSubmit"
-      @cancel="closeModal"
       width="600px"
     >
-      <a-form
-        ref="formRef"
-        :model="formState"
-        :rules="formRules"
-        layout="vertical"
-        :label-col="{ span: 24 }"
-        :wrapper-col="{ span: 24 }"
-      >
-        <a-form-item label="租户名称" name="name">
-          <a-input v-model:value="formState.name" placeholder="请输入租户名称">
-            <template #tooltip>
-              <span>租户的显示名称，如公司名称</span>
-            </template>
+      <a-form ref="formRef" :model="formState" :rules="formRules" layout="vertical">
+        <a-form-item label="租户名称" name="tenantName">
+          <a-input v-model:value="formState.tenantName" placeholder="请输入租户名称">
+            <template #tooltip><span>租户的显示名称，如公司名称</span></template>
           </a-input>
           <div class="field-hint">示例：北京科技有限公司</div>
         </a-form-item>
-        <a-form-item label="租户编码" name="code">
-          <a-input v-model:value="formState.code" placeholder="请输入唯一编码" :disabled="!!editingId">
-            <template #tooltip>
-              <span>唯一标识码，创建后不可修改</span>
-            </template>
+        <a-form-item label="租户编码" name="tenantCode">
+          <a-input v-model:value="formState.tenantCode" placeholder="请输入唯一编码" :disabled="!!editingId">
+            <template #tooltip><span>唯一标识码，创建后不可修改</span></template>
           </a-input>
           <div class="field-hint">示例：beijing-tech-001</div>
         </a-form-item>
-        <a-form-item label="描述" name="description">
-          <a-textarea v-model:value="formState.description" :rows="3" placeholder="请输入租户描述" />
-        </a-form-item>
-        <a-form-item label="最大用户数" name="maxUsers">
-          <a-input-number v-model:value="formState.maxUsers" :min="1" :max="10000" style="width: 100%" />
-        </a-form-item>
-        <a-form-item label="状态" name="status">
-          <a-select v-model:value="formState.status">
-            <a-select-option value="active">启用</a-select-option>
-            <a-select-option value="disabled">禁用</a-select-option>
-          </a-select>
-        </a-form-item>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="联系人" name="contactName">
+              <a-input v-model:value="formState.contactName" placeholder="请输入联系人" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="联系邮箱" name="contactEmail">
+              <a-input v-model:value="formState.contactEmail" placeholder="请输入邮箱" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="套餐类型" name="planType">
+              <a-select v-model:value="formState.planType">
+                <a-select-option value="standard">标准版</a-select-option>
+                <a-select-option value="pro">专业版</a-select-option>
+                <a-select-option value="enterprise">企业版</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="最大用户数" name="maxUsers">
+              <a-input-number v-model:value="formState.maxUsers" :min="1" :max="10000" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -121,19 +125,23 @@ const { loading, dataSource, pagination, searchParams, fetchData, handleTableCha
     fetchApi: (params) => tenantApi.list(params as { page: number; pageSize: number; keyword?: string }),
   })
 
-const { visible, confirmLoading, editingId, openModal, closeModal, handleOk } = useModal()
+const { visible: modalVisible, confirmLoading, editingId, openModal, handleOk } = useModal()
 
 const formState = reactive<TenantForm>({
-  name: '',
-  code: '',
-  description: '',
+  tenantCode: '',
+  tenantName: '',
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  planType: 'standard',
   maxUsers: 100,
-  status: 'active',
+  maxDatasets: 50,
+  maxAiCallsPerDay: 1000,
 })
 
 const formRules = {
-  name: [{ required: true, message: '请输入租户名称', trigger: 'blur' }],
-  code: [
+  tenantName: [{ required: true, message: '请输入租户名称', trigger: 'blur' }],
+  tenantCode: [
     { required: true, message: '请输入租户编码', trigger: 'blur' },
     { pattern: /^[a-z0-9-]+$/, message: '编码只能包含小写字母、数字和横线', trigger: 'blur' },
   ],
@@ -142,32 +150,37 @@ const formRules = {
 const columns = [
   { title: '租户名称', dataIndex: 'tenantName', key: 'tenantName' },
   { title: '编码', dataIndex: 'tenantCode', key: 'tenantCode' },
-  { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+  { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
+  { title: '套餐', dataIndex: 'planType', key: 'planType', width: 100 },
   { title: '最大用户数', dataIndex: 'maxUsers', key: 'maxUsers', width: 120 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
   { title: '操作', key: 'action', width: 160, fixed: 'right' as const },
 ]
 
-async function openEditModal(id?: string) {
-  openModal(id)
-  if (id) {
-    const res = await tenantApi.detail(id)
-    const data = res.data
-    Object.assign(formState, {
-      name: data.tenantName || data.name,
-      code: data.tenantCode || data.code,
-      description: data.description,
-      maxUsers: data.maxUsers,
-      status: data.status === 1 || data.status === 'active' ? 'active' : 'disabled',
-    })
-  } else {
-    Object.assign(formState, { name: '', code: '', description: '', maxUsers: 100, status: 'active' })
-  }
+function openCreateModal() {
+  editingId.value = null
+  Object.assign(formState, {
+    tenantCode: '', tenantName: '', contactName: '', contactEmail: '',
+    contactPhone: '', planType: 'standard', maxUsers: 100, maxDatasets: 50, maxAiCallsPerDay: 1000,
+  })
+  openModal()
 }
 
-// Override openModal to use our custom version
-const _openModal = openModal
+async function openEditModal(record: Tenant) {
+  openModal(record.id)
+  Object.assign(formState, {
+    tenantCode: record.tenantCode,
+    tenantName: record.tenantName,
+    contactName: record.contactName || '',
+    contactEmail: record.contactEmail || '',
+    contactPhone: record.contactPhone || '',
+    planType: record.planType || 'standard',
+    maxUsers: record.maxUsers || 100,
+    maxDatasets: record.maxDatasets || 50,
+    maxAiCallsPerDay: record.maxAiCallsPerDay || 1000,
+  })
+}
 
 async function handleSubmit() {
   await formRef.value?.validateFields()
@@ -188,19 +201,11 @@ async function handleDelete(id: string) {
     await tenantApi.remove(id)
     message.success('删除成功')
     fetchData()
-  } catch {
-    // Error handled by interceptor
-  }
+  } catch {}
 }
 </script>
 
 <style lang="scss" scoped>
-.search-bar {
-  margin-bottom: 16px;
-}
-.field-hint {
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
-}
+.search-bar { margin-bottom: 16px; }
+.field-hint { font-size: 12px; color: #999; margin-top: 4px; }
 </style>

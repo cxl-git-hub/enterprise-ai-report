@@ -4,10 +4,10 @@ export interface User {
   id: string
   username: string
   email: string
-  displayName: string
+  realName: string
+  phone: string
   tenantId: string
-  tenantName: string
-  status: string
+  status: number
   roles: string[]
   createdAt: string
   updatedAt: string
@@ -16,9 +16,10 @@ export interface User {
 export interface UserForm {
   username: string
   email: string
-  displayName: string
+  realName: string
+  phone?: string
   password?: string
-  status?: string
+  status?: number
   roleIds?: string[]
 }
 

@@ -399,9 +399,9 @@ function aiSuggestColumns() {
   }
   message.loading({ content: 'AI正在分析并建议列定义...', key: 'ai-suggest', duration: 0 })
   post<{ data: { columns: SchemaColumn[] } }>('/ai/suggest-columns', {
-    schemaName: formState.name,
+    schema_name: formState.name,
     description: formState.description,
-    datasetId: formState.datasetId,
+    dataset_id: formState.datasetId,
   }).then((res) => {
     if (res?.data?.columns?.length) {
       columnsJson.value = JSON.stringify(res.data.columns, null, 2)

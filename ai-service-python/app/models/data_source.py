@@ -1,9 +1,7 @@
 """DataSource model for database connections."""
 
-import uuid
-from sqlalchemy import String, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, Integer, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -11,25 +9,14 @@ from app.models.base import BaseModel
 class DataSource(BaseModel):
     """External data source configuration."""
 
-    __tablename__ = "data_sources"
+    __tablename__ = "data_source"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_type: Mapped[str] = mapped_column(String(50), nullable=False)  # postgres, mysql, etc.
-    connection_config: Mapped[dict] = mapped_column(JSONB, nullable=False)  # encrypted in production
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=True)
-
-    # Relationships
-    tenant = relationship("Tenant", back_populates="data_sources", lazy="selectin")
-    datasets = relationship("Dataset", back_populates="data_source", lazy="selectin")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    source_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    connection_config: Mapped[str] = mapped_column(Text, nullable=False)  # JSON
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
+    status: Mapped[int] = mapped_column(Integer, default=1)
+    last_sync_time: Mapped[str] = mapped_column(String(32), nullable=True)
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=True)

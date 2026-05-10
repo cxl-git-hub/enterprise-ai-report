@@ -4,9 +4,9 @@ export interface Prompt {
   id: string
   name: string
   description: string
-  template: string
-  variables: string[]
-  category: string
+  templateContent: string
+  variables: string
+  schemaId: string
   version: number
   status: string
   createdAt: string
@@ -16,13 +16,13 @@ export interface Prompt {
 export interface PromptForm {
   name: string
   description: string
-  template: string
-  variables?: string[]
-  category: string
+  templateContent: string
+  variables?: string
+  schemaId?: string
 }
 
 export const promptApi = {
-  list: (params: { page: number; pageSize: number; keyword?: string; category?: string }) =>
+  list: (params: { page: number; pageSize: number; keyword?: string }) =>
     get<{ data: { items: Prompt[]; total: number } }>('/prompt-templates', params),
   detail: (id: string) => get<{ data: Prompt }>(`/prompt-templates/${id}`),
   create: (data: PromptForm) => post<{ data: Prompt }>('/prompt-templates', data),

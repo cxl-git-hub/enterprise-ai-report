@@ -269,10 +269,10 @@ function aiSuggestExpression() {
   }
   message.loading({ content: 'AI正在分析并建议表达式...', key: 'ai-suggest', duration: 0 })
   post<{ data: { expression: string; explanation: string } }>('/ai/suggest-expression', {
-    kpiName: formState.name,
+    kpi_name: formState.name,
     description: formState.description,
-    schemaId: formState.schemaId,
-    aggregationType: formState.aggregationType,
+    schema_id: formState.schemaId,
+    aggregation_type: formState.aggregationType,
   }).then((res) => {
     if (res?.data?.expression) {
       formState.expression = res.data.expression

@@ -15,6 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/datasets")
@@ -97,5 +100,11 @@ public class DatasetController {
     public ApiResponse<Void> syncColumns(@PathVariable Long id) {
         datasetService.syncColumns(id);
         return ApiResponse.success();
+    }
+
+    @GetMapping("/{id}/preview")
+    public ApiResponse<Map<String, Object>> preview(@PathVariable Long id,
+                                                     @RequestParam(defaultValue = "100") Integer limit) {
+        return ApiResponse.success(datasetService.preview(id, limit));
     }
 }

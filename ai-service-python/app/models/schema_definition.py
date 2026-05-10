@@ -1,8 +1,6 @@
 """Schema definition model for column metadata."""
 
-import uuid
-from sqlalchemy import String, Text, Integer, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, Text, Integer, BigInteger, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -11,32 +9,15 @@ from app.models.base import BaseModel
 class SchemaDefinition(BaseModel):
     """Column-level schema definition for a dataset."""
 
-    __tablename__ = "schema_definitions"
+    __tablename__ = "schema_definition"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    dataset_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("datasets.id"),
-        nullable=False,
-        index=True,
-    )
-    column_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    data_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    is_primary_key: Mapped[bool] = mapped_column(default=False)
-    is_nullable: Mapped[bool] = mapped_column(default=True)
-    ordinal_position: Mapped[int] = mapped_column(Integer, nullable=True)
-    sample_values: Mapped[str] = mapped_column(Text, nullable=True)
-
-    # Relationships
-    dataset = relationship("Dataset", back_populates="schema_definitions", lazy="selectin")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    schema_code: Mapped[str] = mapped_column(String(128), nullable=False)
+    schema_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    dataset_id: Mapped[int] = mapped_column(BigInteger, nullable=True, index=True)
+    column_definitions: Mapped[str] = mapped_column(Text, nullable=False)  # JSON
+    validation_rules: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=True)

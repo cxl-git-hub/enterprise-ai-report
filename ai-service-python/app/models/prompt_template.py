@@ -1,8 +1,6 @@
 """Prompt template model."""
 
-import uuid
-from sqlalchemy import String, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import String, Text, Integer, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -11,24 +9,20 @@ from app.models.base import BaseModel
 class PromptTemplate(BaseModel):
     """Reusable prompt template for AI operations."""
 
-    __tablename__ = "prompt_templates"
+    __tablename__ = "prompt_template"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    template_type: Mapped[str] = mapped_column(String(50), nullable=False)  # nl2sql, analysis, report
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    prompt_code: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    schema_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=True)
+    prompt_type: Mapped[str] = mapped_column(String(32), nullable=False)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     user_prompt_template: Mapped[str] = mapped_column(Text, nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    few_shot_examples: Mapped[dict] = mapped_column(JSONB, nullable=True)
-    variables: Mapped[dict] = mapped_column(JSONB, nullable=True)
-    is_default: Mapped[bool] = mapped_column(default=False)
+    output_schema: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    model_config: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=True)

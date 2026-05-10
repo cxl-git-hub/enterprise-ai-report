@@ -9,7 +9,7 @@ export interface RegisterParams {
   username: string
   password: string
   email: string
-  displayName: string
+  realName: string
 }
 
 export interface TokenResponse {

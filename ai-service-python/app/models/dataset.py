@@ -1,9 +1,7 @@
 """Dataset model representing a table/view in a data source."""
 
-import uuid
-from sqlalchemy import String, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, Integer, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -11,32 +9,17 @@ from app.models.base import BaseModel
 class Dataset(BaseModel):
     """Dataset (table or view) within a data source."""
 
-    __tablename__ = "datasets"
+    __tablename__ = "dataset"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    data_source_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("data_sources.id"),
-        nullable=False,
-        index=True,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    display_name: Mapped[str] = mapped_column(String(255), nullable=True)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    table_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    columns_meta: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-
-    # Relationships
-    data_source = relationship("DataSource", back_populates="datasets", lazy="selectin")
-    schema_definitions = relationship("SchemaDefinition", back_populates="dataset", lazy="selectin")
-    kpi_definitions = relationship("KPIDefinition", back_populates="dataset", lazy="selectin")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    source_id: Mapped[int] = mapped_column(BigInteger, nullable=True, index=True)
+    dataset_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    dataset_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    storage_location: Mapped[str] = mapped_column(String(512), nullable=True)
+    row_count: Mapped[int] = mapped_column(BigInteger, default=0)
+    column_count: Mapped[int] = mapped_column(Integer, default=0)
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
+    tags: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    status: Mapped[int] = mapped_column(Integer, default=1)
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=True)

@@ -1,11 +1,12 @@
 import { get, post, put, del } from './request'
 
 export interface Column {
-  name: string
-  type: string
-  nullable: boolean
+  columnName: string
+  columnType: string
+  isNullable: number
   description: string
-  isPrimaryKey: boolean
+  isPrimaryKey: number
+  displayName: string
 }
 
 export interface Dataset {

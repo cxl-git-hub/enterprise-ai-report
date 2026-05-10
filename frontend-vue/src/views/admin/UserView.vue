@@ -68,7 +68,7 @@
           <a-input v-model:value="formState.email" placeholder="请输入邮箱" />
         </a-form-item>
         <a-form-item label="显示名称" name="displayName">
-          <a-input v-model:value="formState.displayName" placeholder="请输入显示名称" />
+          <a-input v-model:value="formState.realName" placeholder="请输入显示名称" />
         </a-form-item>
         <a-form-item v-if="!editingUser" label="密码" name="password">
           <a-input-password v-model:value="formState.password" placeholder="请输入密码" />
@@ -144,7 +144,7 @@ const formRules = {
 
 const columns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },
-  { title: '显示名称', dataIndex: 'displayName', key: 'displayName' },
+  { title: '显示名称', dataIndex: 'realName'' },
   { title: '邮箱', dataIndex: 'email', key: 'email' },
   { title: '租户', dataIndex: 'tenantName', key: 'tenantName' },
   { title: '角色', dataIndex: 'roles', key: 'roles' },

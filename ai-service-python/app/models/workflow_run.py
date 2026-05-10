@@ -1,10 +1,7 @@
 """WorkflowRun model for tracking workflow executions."""
 
-import uuid
-from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, DateTime
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, Integer, BigInteger, Numeric
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -12,32 +9,22 @@ from app.models.base import BaseModel
 class WorkflowRun(BaseModel):
     """A single execution of a workflow."""
 
-    __tablename__ = "workflow_runs"
+    __tablename__ = "workflow_run"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    workflow_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("workflows.id"),
-        nullable=False,
-        index=True,
-    )
-    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, running, completed, failed
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    workflow_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    workflow_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    trigger_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    triggered_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    state: Mapped[str] = mapped_column(String(16), default="PENDING")
+    current_node_id: Mapped[str] = mapped_column(String(128), nullable=True)
+    input_params: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
+    output_result: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
     error_message: Mapped[str] = mapped_column(Text, nullable=True)
-    result_data: Mapped[dict] = mapped_column(JSONB, nullable=True)
-    total_cost: Mapped[float] = mapped_column(nullable=True, default=0.0)
-
-    # Relationships
-    workflow = relationship("Workflow", back_populates="runs", lazy="selectin")
-    traces = relationship("AITrace", back_populates="workflow_run", lazy="selectin")
+    start_time: Mapped[str] = mapped_column(String(32), nullable=True)
+    end_time: Mapped[str] = mapped_column(String(32), nullable=True)
+    duration_ms: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    total_tokens: Mapped[int] = mapped_column(BigInteger, default=0)
+    total_cost: Mapped[float] = mapped_column(Numeric(10, 4), default=0)

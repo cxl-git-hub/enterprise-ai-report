@@ -70,7 +70,7 @@ Schema名称: {req.schema_name}
         {"name": "updated_at", "type": "datetime", "nullable": True, "description": "更新时间", "businessMeaning": "最后更新时间"},
     ]
 
-    return {"data": {"columns": suggested_columns, "prompt": prompt}}
+    return {"code": 200, "message": "success", "data": {"columns": suggested_columns, "prompt": prompt}}
 
 
 @router.post("/suggest-expression")
@@ -106,6 +106,8 @@ KPI名称: {req.kpi_name}
     expression = expression_map.get(agg, "SUM(amount)")
 
     return {
+        "code": 200,
+        "message": "success",
         "data": {
             "expression": expression,
             "explanation": f"基于{agg}聚合类型的默认表达式，可根据实际数据结构调整",
@@ -132,6 +134,8 @@ async def optimize_prompt(
         optimized += "\n\n请以JSON格式返回结果。"
 
     return {
+        "code": 200,
+        "message": "success",
         "data": {
             "template": optimized,
             "explanation": "已添加结构化输出指令，确保AI返回可解析的JSON格式",
@@ -173,6 +177,8 @@ async def generate_report_template(
 """
 
     return {
+        "code": 200,
+        "message": "success",
         "data": {
             "templateContent": template,
             "sections": sections,

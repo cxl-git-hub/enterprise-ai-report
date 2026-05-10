@@ -1,9 +1,7 @@
 """Workflow model for automated reporting workflows."""
 
-import uuid
-from sqlalchemy import String, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, Integer, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -11,30 +9,19 @@ from app.models.base import BaseModel
 class Workflow(BaseModel):
     """Automated reporting workflow definition."""
 
-    __tablename__ = "workflows"
+    __tablename__ = "workflow_definition"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id"),
-        nullable=False,
-        index=True,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    workflow_type: Mapped[str] = mapped_column(String(50), nullable=False)  # nl2sql, analysis, report
-    config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    schedule_cron: Mapped[str] = mapped_column(String(100), nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=True)
-    report_template_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("report_templates.id"),
-        nullable=True,
-    )
-
-    # Relationships
-    runs = relationship("WorkflowRun", back_populates="workflow", lazy="selectin")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    workflow_code: Mapped[str] = mapped_column(String(128), nullable=False)
+    workflow_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    description: Mapped[str] = mapped_column(String(512), nullable=True)
+    dag_definition: Mapped[str] = mapped_column(Text, nullable=False)  # JSON
+    trigger_type: Mapped[str] = mapped_column(String(32), default="manual")
+    cron_expression: Mapped[str] = mapped_column(String(64), nullable=True)
+    timeout_seconds: Mapped[int] = mapped_column(Integer, default=3600)
+    max_retries: Mapped[int] = mapped_column(Integer, default=3)
+    retry_delay_seconds: Mapped[int] = mapped_column(Integer, default=60)
+    status: Mapped[str] = mapped_column(String(16), default="draft")
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=True)

@@ -1,17 +1,16 @@
 """Authentication schemas."""
 
 from typing import Optional
-from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class TokenPayload(BaseModel):
     """JWT token payload."""
 
     sub: str
-    user_id: UUID
-    tenant_id: UUID
-    email: str
+    user_id: int
+    tenant_id: int
+    username: str
     role: str
     exp: Optional[int] = None
 
@@ -19,7 +18,7 @@ class TokenPayload(BaseModel):
 class LoginRequest(BaseModel):
     """Login request body."""
 
-    email: EmailStr
+    username: str
     password: str
 
 
@@ -29,7 +28,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
-    user_id: UUID
-    email: str
+    user_id: int
+    username: str
     role: str
-    tenant_id: UUID
+    tenant_id: int

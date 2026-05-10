@@ -1,9 +1,7 @@
 """Tenant model for multi-tenancy."""
 
-import uuid
-from sqlalchemy import String, Boolean
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Integer, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -11,24 +9,17 @@ from app.models.base import BaseModel
 class Tenant(BaseModel):
     """Organization/tenant model."""
 
-    __tablename__ = "tenants"
+    __tablename__ = "tenant"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    # Tenant's own ID equals its primary key
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False,
-        default=uuid.uuid4,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    # Relationships
-    users = relationship("User", back_populates="tenant", lazy="selectin")
-    data_sources = relationship("DataSource", back_populates="tenant", lazy="selectin")
-    ai_policies = relationship("AIPolicy", back_populates="tenant", lazy="selectin")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    tenant_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    contact_name: Mapped[str] = mapped_column(String(64), nullable=True)
+    contact_email: Mapped[str] = mapped_column(String(128), nullable=True)
+    contact_phone: Mapped[str] = mapped_column(String(32), nullable=True)
+    plan_type: Mapped[str] = mapped_column(String(32), default="standard")
+    max_users: Mapped[int] = mapped_column(Integer, default=10)
+    max_datasets: Mapped[int] = mapped_column(Integer, default=50)
+    max_ai_calls_per_day: Mapped[int] = mapped_column(Integer, default=1000)
+    status: Mapped[int] = mapped_column(Integer, default=1)
+    expire_time: Mapped[str] = mapped_column(String(32), nullable=True)

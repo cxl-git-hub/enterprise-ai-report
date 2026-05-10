@@ -9,21 +9,15 @@ import java.time.LocalDateTime;
 public class DatasetColumn {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
-    private Long tenantId;
     private Long datasetId;
-    private String name;
+    private String columnName;
+    private String columnType;
     private String displayName;
-    private String dataType;
-    private Integer length;
-    private Integer precision;
-    private Integer scale;
-    private Integer nullable;
+    private Integer isPrimaryKey;
+    private Integer isNullable;
     private String description;
-    private Integer sort;
+    private String sampleValues;
+    private Integer sortOrder;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
-    @TableLogic
-    private Integer deleted;
 }

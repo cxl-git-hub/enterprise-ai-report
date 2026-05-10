@@ -16,8 +16,8 @@
           <a-card :bordered="false" class="page-card">
             <a-row :gutter="16">
               <a-col :xs="12" :sm="8" :md="4">
-                <a-tag :color="typeColor[traceDetail.traceType] || 'default'" style="font-size: 14px">
-                  {{ typeLabel[traceDetail.traceType] || traceDetail.traceType }}
+                <a-tag :color="typeColor[traceDetail.aiTaskType] || 'default'" style="font-size: 14px">
+                  {{ typeLabel[traceDetail.aiTaskType] || traceDetail.aiTaskType }}
                 </a-tag>
               </a-col>
               <a-col :xs="12" :sm="8" :md="4">
@@ -30,8 +30,8 @@
                 <div class="stat-item">
                   <div class="stat-label">状态</div>
                   <a-badge
-                    :status="traceDetail.status === 'success' ? 'success' : 'error'"
-                    :text="traceDetail.status === 'success' ? '成功' : '失败'"
+                    :status="traceDetail.status === 'success' ? 'success' : traceDetail.status === 'failed' ? 'error' : 'processing'"
+                    :text="traceDetail.status === 'success' ? '成功' : traceDetail.status === 'failed' ? '失败' : '待处理'"
                   />
                 </div>
               </a-col>
@@ -62,7 +62,7 @@
               <a-col :xs="12" :sm="6" :md="2">
                 <div class="stat-item">
                   <div class="stat-label">耗时</div>
-                  <div class="stat-value">{{ traceDetail.duration }}ms</div>
+                  <div class="stat-value">{{ traceDetail.latencyMs }}ms</div>
                 </div>
               </a-col>
             </a-row>
@@ -73,10 +73,10 @@
           <!-- Full Prompt -->
           <a-card title="完整Prompt" :bordered="false" class="page-card">
             <template #extra>
-              <a-button size="small" @click="copyText(traceDetail.fullPrompt)"><CopyOutlined /> 复制</a-button>
+              <a-button size="small" @click="copyText(traceDetail.inputPrompt)"><CopyOutlined /> 复制</a-button>
             </template>
             <div class="prompt-display">
-              <pre>{{ traceDetail.fullPrompt }}</pre>
+              <pre>{{ traceDetail.inputPrompt }}</pre>
             </div>
           </a-card>
 
@@ -131,34 +131,9 @@
             </a-descriptions>
           </a-card>
 
-          <!-- Retry History -->
-          <a-card title="重试历史" :bordered="false" class="page-card" style="margin-top: 16px">
-            <div v-if="traceDetail.retries?.length">
-              <a-timeline>
-                <a-timeline-item
-                  v-for="retry in traceDetail.retries"
-                  :key="retry.attempt"
-                  :color="retry.error ? 'red' : 'green'"
-                >
-                  <div>
-                    <strong>第{{ retry.attempt }}次尝试</strong>
-                    <span style="color: #999; font-size: 12px; margin-left: 8px">{{ retry.timestamp }}</span>
-                  </div>
-                  <div v-if="retry.error" style="color: #ff4d4f; font-size: 12px; margin-top: 4px">
-                    {{ retry.error }}
-                  </div>
-                  <div v-else style="color: #52c41a; font-size: 12px; margin-top: 4px">
-                    成功 · {{ retry.tokens }} tokens
-                  </div>
-                </a-timeline-item>
-              </a-timeline>
-            </div>
-            <a-empty v-else description="无重试记录" :image-style="{ height: '40px' }" />
-          </a-card>
-
           <!-- Metadata -->
           <a-card title="元数据" :bordered="false" class="page-card" style="margin-top: 16px">
-            <div class="json-viewer">{{ formatJson(traceDetail.metadata) }}</div>
+            <div class="json-viewer">{{ formatJson(traceDetail.modelConfig) }}</div>
           </a-card>
         </a-col>
       </a-row>

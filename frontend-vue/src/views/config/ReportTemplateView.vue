@@ -93,7 +93,7 @@
           <template #tooltip><span>报表模板的HTML/Markdown内容</span></template>
           <div class="code-editor">
             <a-textarea
-              v-model:value="formState.templateContent"
+              v-model:value="formState.templateFile"
               :rows="10"
               placeholder="<h1>{{title}}</h1>&#10;<p>报告期间: {{period}}</p>&#10;<div>{{content}}</div>"
               style="font-family: monospace; font-size: 13px"
@@ -164,7 +164,7 @@ const columns = [
 
 function openCreateModal() {
   editingId.value = null
-  Object.assign(formState, { name: '', description: '', format: 'pdf', templateContent: '', sections: [] })
+  Object.assign(formState, { name: '', description: '', format: 'pdf', templateFile: '', variables: '' })
   openModal()
 }
 
@@ -186,9 +186,9 @@ function aiSuggestTemplate() {
     format: formState.format,
   }).then((res) => {
     if (res?.data?.templateContent) {
-      formState.templateContent = res.data.templateContent
+      formState.templateFile = res.data.templateContent
       if (res.data.sections?.length) {
-        formState.sections = res.data.sections
+        formState.variables = res.data.sections
       }
       message.success({ content: 'AI已生成报表模板', key: 'ai-generate' })
     } else {

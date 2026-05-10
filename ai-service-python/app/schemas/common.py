@@ -7,12 +7,14 @@ T = TypeVar("T")
 
 
 class ApiResponse(BaseModel, Generic[T]):
-    """Standard API response wrapper."""
+    """Standard API response wrapper - matches Java backend format."""
 
-    success: bool = True
-    message: str = "OK"
+    code: int = 200
+    message: str = "success"
     data: Optional[T] = None
-    error_code: Optional[str] = None
+
+    def __init__(self, data=None, code=200, message="success", **kwargs):
+        super().__init__(code=code, message=message, data=data, **kwargs)
 
 
 class PageResult(BaseModel, Generic[T]):

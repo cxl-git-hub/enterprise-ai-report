@@ -5,10 +5,10 @@ export interface ReportTemplate {
   name: string
   description: string
   format: string
-  templateContent: string
-  sections: Array<{ name: string; type: string; config: Record<string, unknown> }>
-  status: string
+  templateFile: string
+  variables: string
   version: number
+  status: string
   createdAt: string
   updatedAt: string
 }
@@ -17,8 +17,8 @@ export interface ReportTemplateForm {
   name: string
   description: string
   format: string
-  templateContent: string
-  sections?: Array<{ name: string; type: string; config: Record<string, unknown> }>
+  templateFile: string
+  variables?: string
 }
 
 export const reportTemplateApi = {

@@ -79,8 +79,12 @@ public class KpiController {
         return ApiResponse.success();
     }
 
-    @PostMapping("/execute")
-    public ApiResponse<BigDecimal> execute(@Valid @RequestBody KpiExecuteRequest request) {
+    @PostMapping("/{id}/execute")
+    public ApiResponse<BigDecimal> execute(@PathVariable Long id, @RequestBody(required = false) KpiExecuteRequest request) {
+        if (request == null) {
+            request = new KpiExecuteRequest();
+        }
+        request.setKpiId(id);
         return ApiResponse.success(kpiService.executeKpi(request));
     }
 }
