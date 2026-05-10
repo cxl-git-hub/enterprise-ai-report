@@ -1,10 +1,12 @@
 # 项目结构目录
 
+> 最后更新: 2026-05-10
+
 ```
 enterprise-ai-report/
 │
 ├── README.md                              # 项目说明文档
-├── start.sh                               # 一键启动脚本
+├── AUDIT_REPORT.md                        # 商业级审查报告
 ├── .gitignore                             # Git忽略配置
 │
 ├── docs/                                  # 📚 文档
@@ -73,7 +75,7 @@ enterprise-ai-report/
 │           │   ├── WorkflowState.java     #    PENDING/RUNNING/SUCCESS/FAILED/RETRYING/PAUSED/CANCELLED
 │           │   ├── ConfigType.java        #    schema/kpi/workflow/prompt/report
 │           │   ├── DataSourceType.java    #    mysql/postgresql/api/excel/minio
-│           │   └── ReportFormat.java      #    word/ppt/pdf
+│           │   └── ReportFormat.java      #    word/ppt/pdf/xlsx
 │           │
 │           ├── mapper/                    # 🗃️ Mapper层(27个)
 │           │   └── *Mapper.java           #    每实体一个Mapper
@@ -97,11 +99,11 @@ enterprise-ai-report/
 │           │   ├── AuditService.java      #    审计服务
 │           │   └── impl/                  #    各服务实现类
 │           │
-│           ├── controller/                # 🌐 控制器层(15个)
-│           │   ├── AuthController.java    #    POST /api/auth/login|register|refresh, GET /me
+│           ├── controller/                # 🌐 控制器层(18个)
+│           │   ├── AuthController.java    #    认证+个人资料+密码+统计
 │           │   ├── TenantController.java  #    CRUD /api/tenants
 │           │   ├── UserController.java    #    CRUD /api/users
-│           │   ├── DataSourceController.java # CRUD /api/datasources
+│           │   ├── DataSourceController.java # CRUD + 文件上传 /api/datasources
 │           │   ├── DatasetController.java #    CRUD /api/datasets
 │           │   ├── SchemaController.java  #    CRUD /api/schemas
 │           │   ├── KpiController.java     #    CRUD /api/kpis
@@ -112,13 +114,16 @@ enterprise-ai-report/
 │           │   ├── ReportTemplateController.java    # /api/report-templates
 │           │   ├── ReportOutputController.java      # /api/reports
 │           │   ├── AiTraceController.java #    /api/ai/traces
-│           │   └── AuditLogController.java#    /api/audit-logs
+│           │   ├── AuditLogController.java#    /api/audit-logs
+│           │   ├── DashboardController.java  # 🆕 /api/dashboard/*
+│           │   ├── NotificationController.java # 🆕 /api/notifications
+│           │   └── SettingsController.java    # 🆕 /api/settings
 │           │
 │           ├── engine/                    # 🚀 核心引擎
 │           │   ├── kpi/
 │           │   │   └── KpiDslEvaluator.java # KPI DSL求值器
 │           │   ├── workflow/
-│           │   │   ├── DagExecutor.java   #    DAG执行引擎(拓扑排序+状态机)
+│           │   │   ├── DagExecutor.java   #    DAG执行引擎(拓扑排序+并行执行+状态机)
 │           │   │   ├── NodeExecutor.java  #    节点执行器接口
 │           │   │   ├── KpiCalcNodeExecutor.java    # KPI计算节点
 │           │   │   ├── AiAnalysisNodeExecutor.java # AI分析节点
@@ -127,7 +132,7 @@ enterprise-ai-report/
 │           │   │   ├── DependencyValidator.java # 依赖校验器
 │           │   │   └── VersionManager.java      # 版本管理器
 │           │   └── output/
-│           │       └── ReportGenerator.java     # 报表生成(Word/PPT/PDF)
+│           │       └── ReportGenerator.java     # 报表生成(Word/PPT/PDF/Excel)
 │           │
 │           ├── dto/                       # 📨 数据传输对象
 │           │   ├── ApiResponse.java       #    统一响应
@@ -155,7 +160,7 @@ enterprise-ai-report/
 │   │   ├── env.py                         #    迁移环境
 │   │   └── script.py.mako                 #    迁移脚本模板
 │   └── app/
-│       ├── main.py                        # ⭐ FastAPI入口
+│       ├── main.py                        # ⭐ FastAPI入口(CORS白名单)
 │       ├── core/                          # ⚙️ 核心配置
 │       │   ├── config.py                  #    Pydantic Settings
 │       │   ├── database.py                #    异步SQLAlchemy引擎
@@ -212,6 +217,7 @@ enterprise-ai-report/
 │           ├── analysis.py                #    /api/ai/analysis
 │           ├── report.py                  #    /api/ai/report/*
 │           ├── traces.py                  #    /api/ai/traces
+│           ├── suggestions.py             # 🆕 /api/ai/suggest-*
 │           └── health.py                  #    /api/health
 │
 ├── frontend-vue/                          # 🖥️ Vue 3 前端
@@ -224,11 +230,11 @@ enterprise-ai-report/
 │   ├── .env.development                   #    开发环境变量
 │   ├── .env.production                    #    生产环境变量
 │   └── src/
-│       ├── main.ts                        # ⭐ Vue入口
-│       ├── App.vue                        #    根组件
+│       ├── main.ts                        # ⭐ Vue入口(含键盘快捷键注册)
+│       ├── App.vue                        #    根组件(深色模式+返回顶部)
 │       ├── env.d.ts                       #    TS声明
 │       ├── api/                           # 🌐 API模块(14个)
-│       │   ├── request.ts                 #    Axios实例(JWT拦截器)
+│       │   ├── request.ts                 #    Axios实例(JWT拦截器+Token刷新)
 │       │   ├── auth.ts                    #    认证API
 │       │   ├── tenant.ts                  #    租户API
 │       │   ├── user.ts                    #    用户API
@@ -244,59 +250,69 @@ enterprise-ai-report/
 │       │   ├── ai-trace.ts                #    AI追踪API
 │       │   └── audit.ts                   #    审计日志API
 │       ├── router/                        # 🛤️ 路由
-│       │   ├── index.ts                   #    路由定义
+│       │   ├── index.ts                   #    路由定义(26个路由)
 │       │   └── guards.ts                  #    路由守卫
 │       ├── stores/                        # 📊 Pinia状态
 │       │   ├── index.ts                   #    Pinia配置
-│       │   ├── auth.ts                    #    认证状态
-│       │   ├── app.ts                     #    应用状态
+│       │   ├── auth.ts                    #    认证状态(含Token刷新)
+│       │   ├── app.ts                     #    应用状态(含主题)
 │       │   └── tenant.ts                  #    租户状态
 │       ├── layouts/                       # 📐 布局
-│       │   ├── MainLayout.vue             #    主布局(侧栏+顶栏)
+│       │   ├── MainLayout.vue             #    主布局(侧栏+顶栏+全局搜索+通知铃铛)
 │       │   └── BasicLayout.vue            #    基础布局(登录页)
 │       ├── components/                    # 🧩 公共组件
 │       │   └── common/
-│       │       ├── PageHeader.vue         #    页头+面包屑
+│       │       ├── PageHeader.vue         #    页头+面包屑+操作按钮
 │       │       ├── SearchForm.vue         #    搜索表单
-│       │       └── ConfirmDelete.vue      #    删除确认
+│       │       ├── ConfirmDelete.vue      #    删除确认
+│       │       └── NotificationCenter.vue # 🆕 通知铃铛组件
 │       ├── composables/                   # 🪝 组合式函数
 │       │   ├── useTable.ts                #    表格逻辑复用
 │       │   ├── useModal.ts                #    弹窗逻辑复用
-│       │   └── usePermission.ts           #    权限检查
+│       │   ├── usePermission.ts           #    权限检查
+│       │   └── useKeyboardShortcuts.ts    # 🆕 全局键盘快捷键
+│       ├── utils/                         # 🛠️ 工具函数
+│       │   └── export.ts                  # 🆕 数据导出(CSV/JSON/Markdown)
 │       ├── assets/styles/                 # 🎨 样式
 │       │   ├── variables.scss             #    SCSS变量
-│       │   └── main.scss                  #    全局样式
-│       └── views/                         # 📄 页面(22个)
+│       │   └── main.scss                  #    全局样式+深色模式CSS
+│       └── views/                         # 📄 页面(26个)
 │           ├── auth/
-│           │   └── LoginView.vue          #    登录页
+│           │   └── LoginView.vue          #    登录页(含租户选择+记住我)
 │           ├── dashboard/
-│           │   └── DashboardView.vue      #    仪表盘(统计+图表)
+│           │   └── DashboardView.vue      #    仪表盘(真实API+加载状态)
 │           ├── admin/
 │           │   ├── TenantView.vue         #    租户管理
 │           │   ├── UserView.vue           #    用户管理
 │           │   └── RoleView.vue           #    角色管理
 │           ├── datahub/
-│           │   ├── DataSourceView.vue     #    数据源管理
-│           │   └── DatasetView.vue        #    数据集管理
+│           │   ├── DataSourceView.vue     #    数据源管理+文件上传
+│           │   └── DatasetView.vue        #    数据集管理+数据预览
 │           ├── config/
-│           │   ├── SchemaView.vue         #    Schema管理(JSON编辑+版本)
-│           │   ├── KpiView.vue            #    KPI管理(DSL编辑+执行)
-│           │   ├── PromptView.vue         #    Prompt管理
-│           │   ├── ReportTemplateView.vue #    报表模板管理
+│           │   ├── SchemaView.vue         #    Schema管理(可视化列编辑器+AI建议)
+│           │   ├── KpiView.vue            #    KPI管理(DSL编辑+执行+AI建议)
+│           │   ├── PromptView.vue         #    Prompt管理(AI优化)
+│           │   ├── ReportTemplateView.vue #    报表模板管理(AI生成)
 │           │   └── ConsistencyView.vue    #    配置一致性(SVG依赖图+校验+快照)
 │           ├── workflow/
-│           │   ├── WorkflowView.vue       #    工作流定义(DAG编辑)
-│           │   ├── WorkflowRunListView.vue#    运行列表
-│           │   └── WorkflowRunDetailView.vue # 运行详情(时间线+节点+日志)
+│           │   ├── WorkflowView.vue       #    工作流定义(可视化DAG编辑器)
+│           │   ├── WorkflowRunListView.vue#    运行列表(自动刷新)
+│           │   └── WorkflowRunDetailView.vue # 运行详情(DAG拓扑图+时间线+节点+日志)
 │           ├── ai/
-│           │   ├── Nl2sqlView.vue         #    NL2SQL Playground
-│           │   ├── AnalysisView.vue       #    AI分析(ECharts可视化)
+│           │   ├── Nl2sqlView.vue         #    NL2SQL Playground(结果导出)
+│           │   ├── AnalysisView.vue       #    AI分析(ECharts可视化+结果导出)
 │           │   ├── TraceListView.vue      #    追踪列表
-│           │   └── TraceDetailView.vue    #    追踪详情(Prompt+输出+成本)
+│           │   └── TraceDetailView.vue    #    追踪详情(Prompt复制+成本图表)
 │           ├── output/
-│           │   └── ReportView.vue         #    报表输出(下载)
-│           └── audit/
-│               └── AuditLogView.vue       #    审计日志
+│           │   └── ReportView.vue         #    报表输出(下载+格式筛选)
+│           ├── audit/
+│           │   └── AuditLogView.vue       #    审计日志(数据导出+日期筛选)
+│           ├── profile/                   # 🆕
+│           │   └── ProfileView.vue        #    个人中心
+│           ├── settings/                  # 🆕
+│           │   └── SettingsView.vue       #    系统设置
+│           └── notifications/             # 🆕
+│               └── NotificationView.vue   #    通知中心
 │
 └── tests/                                 # 🧪 测试
     └── ai-service-python/
@@ -310,10 +326,10 @@ enterprise-ai-report/
 
 | 模块 | 文件数 | 代码行数 | 技术栈 |
 |------|--------|----------|--------|
-| Java后端 | 148 | 5,859 | Spring Boot 3.2 + MyBatis Plus |
-| Python AI服务 | 76 | 5,158 | FastAPI + LangGraph |
-| Vue前端 | 54 | 6,681 | Vue 3 + Ant Design Vue |
+| Java后端 | ~155 | ~6,200 | Spring Boot 3.2 + MyBatis Plus |
+| Python AI服务 | ~78 | ~5,400 | FastAPI + LangGraph |
+| Vue前端 | ~62 | ~8,500 | Vue 3 + Ant Design Vue |
 | 数据库 | 1 | 556 | MySQL 8 |
 | Docker | 1 | 85 | Docker Compose |
-| 文档 | 4 | ~800 | Markdown |
-| **合计** | **~303** | **~18,254** | - |
+| 文档 | 4 | ~1,200 | Markdown |
+| **合计** | **~334** | **~21,000** | - |

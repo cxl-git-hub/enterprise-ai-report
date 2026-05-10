@@ -1,5 +1,7 @@
 # API 接口文档
 
+> 最后更新: 2026-05-10
+
 ## 基础信息
 
 - **Base URL**: `http://localhost:8080/api`
@@ -1021,5 +1023,365 @@ GET /api/audit-logs?page=1&size=20&action=login&startDate=2024-05-01&endDate=202
     {"field": "username", "message": "用户名不能为空"},
     {"field": "password", "message": "密码长度不能少于6位"}
   ]
+}
+```
+
+---
+
+## 16. 仪表盘 (Dashboard) 🆕
+
+### 16.1 统计概览
+
+```
+GET /api/dashboard/stats
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "datasourceCount": 12,
+    "kpiCount": 45,
+    "workflowCount": 8,
+    "reportCount": 156
+  }
+}
+```
+
+### 16.2 最近运行
+
+```
+GET /api/dashboard/recent-runs?limit=5
+```
+
+### 16.3 运行状态分布
+
+```
+GET /api/dashboard/run-status-distribution
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": [
+    {"status": "success", "count": 120},
+    {"status": "failed", "count": 15},
+    {"status": "running", "count": 3}
+  ]
+}
+```
+
+---
+
+## 17. 个人中心 (Auth Profile) 🆕
+
+### 17.1 更新个人资料
+
+```
+PUT /api/auth/profile
+Authorization: Bearer {accessToken}
+```
+
+**请求体**:
+```json
+{
+  "displayName": "张三",
+  "email": "zhangsan@company.com",
+  "phone": "13800138000",
+  "locale": "zh-CN"
+}
+```
+
+### 17.2 修改密码
+
+```
+PUT /api/auth/password
+Authorization: Bearer {accessToken}
+```
+
+**请求体**:
+```json
+{
+  "oldPassword": "oldPass123",
+  "newPassword": "newPass456"
+}
+```
+
+### 17.3 通知偏好
+
+```
+PUT /api/auth/notification-preferences
+Authorization: Bearer {accessToken}
+```
+
+**请求体**:
+```json
+{
+  "workflowComplete": true,
+  "workflowFailed": true,
+  "reportReady": true,
+  "systemAlert": false
+}
+```
+
+### 17.4 我的统计
+
+```
+GET /api/auth/my-stats
+Authorization: Bearer {accessToken}
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "kpiCount": 12,
+    "workflowCount": 5,
+    "reportCount": 38
+  }
+}
+```
+
+---
+
+## 18. 通知管理 (Notifications) 🆕
+
+### 18.1 通知列表
+
+```
+GET /api/notifications?limit=20&type=error&read=false
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": "1",
+      "type": "error",
+      "message": "工作流「月度分析」执行失败: 节点 ai_analysis 超时",
+      "read": false,
+      "createdAt": "2024-05-10T15:30:00",
+      "link": "/workflow/run/123"
+    }
+  ]
+}
+```
+
+### 18.2 标记已读
+
+```
+PUT /api/notifications/{id}/read
+```
+
+### 18.3 全部已读
+
+```
+PUT /api/notifications/read-all
+```
+
+### 18.4 清空通知
+
+```
+PUT /api/notifications/clear
+```
+
+### 18.5 删除通知
+
+```
+DELETE /api/notifications/{id}
+```
+
+---
+
+## 19. 系统设置 (Settings) 🆕
+
+### 19.1 获取设置
+
+```
+GET /api/settings
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "appearance": {
+      "theme": "light",
+      "primaryColor": "#1677ff",
+      "sidebarPosition": "left",
+      "enableAnimation": true,
+      "compactMode": false
+    },
+    "ai": {
+      "model": "gpt-4",
+      "baseUrl": "https://api.openai.com/v1",
+      "temperature": 0.7,
+      "maxTokens": 4096,
+      "timeout": 60,
+      "dailyLimit": 10000
+    },
+    "security": {
+      "sessionTimeout": 120,
+      "twoFactor": false
+    },
+    "advanced": {
+      "dataRetention": 90,
+      "maxConcurrentWorkflows": 5,
+      "maxReportStorage": 1024,
+      "debugMode": false
+    }
+  }
+}
+```
+
+### 19.2 保存外观设置
+
+```
+PUT /api/settings/appearance
+```
+
+### 19.3 保存AI配置
+
+```
+PUT /api/settings/ai
+```
+
+### 19.4 保存通知设置
+
+```
+PUT /api/settings/notifications
+```
+
+### 19.5 保存安全设置
+
+```
+PUT /api/settings/security
+```
+
+### 19.6 保存高级设置
+
+```
+PUT /api/settings/advanced
+```
+
+### 19.7 清除缓存
+
+```
+PUT /api/settings/clear-cache
+```
+
+---
+
+## 20. 文件上传 (DataSource Upload) 🆕
+
+### 20.1 上传数据文件
+
+```
+POST /api/datasources/upload
+Content-Type: multipart/form-data
+```
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 数据源名称 |
+| description | string | 否 | 描述 |
+| file | File | 是 | 文件(Excel/CSV/JSON) |
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "id": 42,
+    "name": "Q1销售数据",
+    "type": "file",
+    "description": "上传文件: sales_q1.xlsx",
+    "status": 1
+  }
+}
+```
+
+---
+
+## 21. AI建议 (AI Suggestions) 🆕
+
+### 21.1 建议列定义
+
+```
+POST /api/ai/suggest-columns
+```
+
+**请求体**:
+```json
+{
+  "schema_name": "订单数据",
+  "description": "电商订单表",
+  "dataset_id": "1"
+}
+```
+
+**响应**:
+```json
+{
+  "data": {
+    "columns": [
+      {"name": "id", "type": "bigint", "nullable": false, "description": "主键ID", "businessMeaning": "订单唯一标识"},
+      {"name": "amount", "type": "decimal", "nullable": false, "description": "订单金额", "businessMeaning": "订单总金额(元)"}
+    ]
+  }
+}
+```
+
+### 21.2 建议KPI表达式
+
+```
+POST /api/ai/suggest-expression
+```
+
+**请求体**:
+```json
+{
+  "kpi_name": "日均订单金额",
+  "description": "每天的平均订单金额",
+  "schema_id": "1",
+  "aggregation_type": "avg"
+}
+```
+
+### 21.3 优化提示词
+
+```
+POST /api/ai/optimize-prompt
+```
+
+**请求体**:
+```json
+{
+  "name": "订单分析NL2SQL",
+  "description": "将自然语言转为SQL查询",
+  "category": "nl2sql",
+  "current_template": "你是一个SQL专家..."
+}
+```
+
+### 21.4 生成报表模板
+
+```
+POST /api/ai/generate-report-template
+```
+
+**请求体**:
+```json
+{
+  "name": "月度经营分析报告",
+  "description": "包含销售、利润、用户增长等指标",
+  "format": "pdf"
 }
 ```
