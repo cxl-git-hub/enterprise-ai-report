@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from uuid import UUID
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -31,9 +30,9 @@ class AuthService:
 
     def create_access_token(
         self,
-        user_id: UUID,
-        tenant_id: UUID,
-        email: str,
+        user_id: int,
+        tenant_id: int,
+        username: str,
         role: str,
         expires_delta: Optional[timedelta] = None,
     ) -> str:
@@ -46,7 +45,7 @@ class AuthService:
             "sub": str(user_id),
             "user_id": str(user_id),
             "tenant_id": str(tenant_id),
-            "email": email,
+            "username": username,
             "role": role,
             "exp": expire,
             "iat": datetime.now(timezone.utc),
@@ -66,7 +65,7 @@ class AuthService:
                 return None
 
             result = await self.db.execute(
-                select(User).where(User.id == UUID(user_id), User.is_active == True)
+                select(User).where(User.id == int(user_id), User.status == 1)
             )
             user = result.scalar_one_or_none()
             if not user:
@@ -75,21 +74,21 @@ class AuthService:
             return {
                 "id": user.id,
                 "tenant_id": user.tenant_id,
+                "username": user.username,
                 "email": user.email,
-                "role": user.role,
-                "full_name": user.full_name,
+                "real_name": user.real_name,
             }
         except JWTError:
             return None
 
-    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
-        """Authenticate a user by email and password."""
+    async def authenticate_user(self, username: str, password: str) -> Optional[User]:
+        """Authenticate a user by username and password."""
         result = await self.db.execute(
-            select(User).where(User.email == email, User.is_active == True)
+            select(User).where(User.username == username, User.status == 1)
         )
         user = result.scalar_one_or_none()
         if not user:
             return None
-        if not self.verify_password(password, user.hashed_password):
+        if not self.verify_password(password, user.password):
             return None
         return user

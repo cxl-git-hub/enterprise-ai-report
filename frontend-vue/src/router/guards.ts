@@ -37,7 +37,7 @@ export async function authGuard(
       const permissions: string[] = JSON.parse(permissionsStr)
       const rolesStr = localStorage.getItem('roles') || '[]'
       const roles: string[] = JSON.parse(rolesStr)
-      if (!roles.includes('admin') && !permissions.includes(requiredPermission)) {
+      if (!roles.includes('SUPER_ADMIN') && !roles.includes('TENANT_ADMIN') && !permissions.includes('*') && !permissions.includes(requiredPermission)) {
         next('/dashboard')
         return
       }

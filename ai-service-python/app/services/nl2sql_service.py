@@ -1,7 +1,6 @@
 """Natural Language to SQL service orchestrator."""
 
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,15 +20,14 @@ class NL2SQLService:
 
     async def execute(
         self,
-        tenant_id: UUID,
-        user_id: UUID,
+        tenant_id: int,
+        user_id: int,
         query: str,
-        dataset_ids: Optional[List[UUID]] = None,
+        dataset_ids: Optional[List[int]] = None,
         max_rows: int = 1000,
         include_explanation: bool = True,
     ) -> Dict[str, Any]:
         """Execute the NL2SQL pipeline."""
-        # Create trace
         trace = await self.trace_service.create_trace(
             tenant_id=tenant_id,
             user_id=user_id,
@@ -38,7 +36,6 @@ class NL2SQLService:
         )
 
         try:
-            # Build initial state
             initial_state = NL2SQLState(
                 tenant_id=str(tenant_id),
                 user_id=str(user_id),
@@ -48,11 +45,9 @@ class NL2SQLService:
                 include_explanation=include_explanation,
             )
 
-            # Create and run the graph
             graph = create_nl2sql_graph(self.db)
             final_state = await graph.ainvoke(initial_state)
 
-            # Update trace with results
             await self.trace_service.update_trace(
                 trace_id=trace.id,
                 status="success" if final_state.get("result") else "failed",
@@ -97,3 +92,28 @@ class NL2SQLService:
                 "error": str(e),
                 "trace_id": str(trace.id),
             }
+
+    async def execute_raw_sql(
+        self,
+        tenant_id: int,
+        sql: str,
+        max_rows: int = 1000,
+    ) -> Dict[str, Any]:
+        """Execute a raw SQL query directly."""
+        from app.safety.sql_validator import SafetySQLValidator
+        validator = SafetySQLValidator()
+        result = validator.validate(sql)
+        if not result.is_valid:
+            return {"success": False, "error": "SQL validation failed: " + "; ".join(result.errors)}
+
+        try:
+            # In production, execute against the actual data source
+            # For now, return a placeholder
+            return {
+                "success": True,
+                "columns": [],
+                "rows": [],
+                "row_count": 0,
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}

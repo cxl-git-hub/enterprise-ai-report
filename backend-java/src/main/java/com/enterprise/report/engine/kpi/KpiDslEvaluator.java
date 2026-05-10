@@ -142,6 +142,14 @@ public class KpiDslEvaluator {
         }
 
         String tableName = dataset.getTableName();
+        // Validate table name to prevent injection
+        if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+            throw new BusinessException(400, "Invalid table name: " + tableName);
+        }
+        // Validate function name
+        if (!func.matches("^(COUNT|SUM|AVG|MIN|MAX)$")) {
+            throw new BusinessException(400, "Invalid aggregation function: " + func);
+        }
         String whereClause = where != null ? " WHERE " + replaceParams(where, params) : "";
         String sql = "SELECT " + func + "(*) FROM " + tableName + whereClause;
 
@@ -170,7 +178,9 @@ public class KpiDslEvaluator {
             String paramName = matcher.group(1);
             Object value = params.get(paramName);
             if (value != null) {
-                String replacement = value instanceof String ? "'" + value + "'" : value.toString();
+                // Sanitize: escape single quotes to prevent SQL injection
+                String strValue = value.toString().replace("'", "''");
+                String replacement = value instanceof String ? "'" + strValue + "'" : value.toString();
                 matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
             }
         }

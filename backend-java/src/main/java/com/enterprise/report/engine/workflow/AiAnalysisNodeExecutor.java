@@ -55,8 +55,8 @@ public class AiAnalysisNodeExecutor implements NodeExecutor {
             }
 
             Map<String, Object> params = new HashMap<>();
-            if (nodeRun.getInputParams() != null) {
-                params = objectMapper.readValue(nodeRun.getInputParams(),
+            if (nodeRun.getInputData() != null) {
+                params = objectMapper.readValue(nodeRun.getInputData(),
                         new TypeReference<Map<String, Object>>() {});
             }
             params.putAll(context);
@@ -68,7 +68,7 @@ public class AiAnalysisNodeExecutor implements NodeExecutor {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
 
             ResponseEntity<String> response = restTemplate.exchange(
-                    aiServiceUrl + "/api/analyze",
+                    aiServiceUrl + "/api/ai/analysis",
                     HttpMethod.POST,
                     request,
                     String.class);

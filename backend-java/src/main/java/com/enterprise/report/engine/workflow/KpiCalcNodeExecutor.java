@@ -35,8 +35,8 @@ public class KpiCalcNodeExecutor implements NodeExecutor {
 
         try {
             Map<String, Object> params = new HashMap<>();
-            if (nodeRun.getInputParams() != null) {
-                params = objectMapper.readValue(nodeRun.getInputParams(),
+            if (nodeRun.getInputData() != null) {
+                params = objectMapper.readValue(nodeRun.getInputData(),
                         new TypeReference<Map<String, Object>>() {});
             }
             params.putAll(context);

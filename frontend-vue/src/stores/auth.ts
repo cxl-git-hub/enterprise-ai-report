@@ -87,6 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function hasPermission(perm: string): boolean {
     if (roles.value.includes('SUPER_ADMIN')) return true
+    if (permissions.value.includes('*')) return true
     return permissions.value.includes(perm)
   }
 

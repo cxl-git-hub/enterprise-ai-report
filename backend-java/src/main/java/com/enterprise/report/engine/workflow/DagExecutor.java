@@ -7,6 +7,7 @@ import com.enterprise.report.exception.BusinessException;
 import com.enterprise.report.mapper.WorkflowNodeRunMapper;
 import com.enterprise.report.mapper.WorkflowRunMapper;
 import com.enterprise.report.mapper.WorkflowStateSnapshotMapper;
+import com.enterprise.report.security.TenantContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,9 @@ public class DagExecutor {
                 if (entry.getValue() == 0) readyQueue.add(entry.getKey());
             }
 
+            // Capture tenant context for async threads
+            Long tenantId = TenantContext.getTenantId();
+
             while (!readyQueue.isEmpty()) {
                 List<String> currentLevel = new ArrayList<>(readyQueue);
                 readyQueue.clear();
@@ -66,6 +70,9 @@ public class DagExecutor {
                 // Execute current level in parallel
                 List<CompletableFuture<Void>> futures = currentLevel.stream()
                         .map(nodeId -> CompletableFuture.runAsync(() -> {
+                            // Restore tenant context in async thread
+                            TenantContext.setTenantId(tenantId);
+                            try {
                             DagNode node = nodeMap.get(nodeId);
                             if (node == null) return;
 
@@ -96,6 +103,9 @@ public class DagExecutor {
                             nodeRun.setEndTime(LocalDateTime.now());
                             nodeRun.setDurationMs(Duration.between(nodeRun.getStartTime(), nodeRun.getEndTime()).toMillis());
                             nodeRunMapper.updateById(nodeRun);
+                            } finally {
+                                TenantContext.clear();
+                            }
                         }, executorService))
                         .collect(Collectors.toList());
 

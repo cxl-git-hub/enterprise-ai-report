@@ -1,7 +1,7 @@
 """AI policy enforcement service."""
 
-from typing import Optional
-from uuid import UUID
+import json
+from typing import Optional, Dict, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,44 +15,46 @@ class AIPolicyService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_active_policy(self, tenant_id: UUID) -> Optional[AIPolicy]:
+    async def get_active_policy(self, tenant_id: int) -> Optional[AIPolicy]:
         """Get the active AI policy for a tenant."""
         result = await self.db.execute(
             select(AIPolicy).where(
                 AIPolicy.tenant_id == tenant_id,
-                AIPolicy.is_active == True,
+                AIPolicy.status == 1,
             )
         )
         return result.scalar_one_or_none()
 
-    async def check_sql_generation_allowed(self, tenant_id: UUID) -> tuple[bool, str]:
+    def _parse_rules(self, policy: AIPolicy) -> Dict[str, Any]:
+        """Parse the JSON rules from policy."""
+        if not policy.rules:
+            return {}
+        try:
+            return json.loads(policy.rules) if isinstance(policy.rules, str) else policy.rules
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    async def is_allowed(self, tenant_id: int, rule_name: str) -> bool:
+        """Check if a specific rule is allowed."""
+        policy = await self.get_active_policy(tenant_id)
+        if not policy:
+            return True  # Default allow
+        rules = self._parse_rules(policy)
+        return rules.get(rule_name, True)
+
+    async def check_sql_generation_allowed(self, tenant_id: int) -> bool:
         """Check if SQL generation is allowed for the tenant."""
-        policy = await self.get_active_policy(tenant_id)
-        if not policy:
-            return True, "No policy configured, defaulting to allow"
-        if not policy.allow_sql_generation:
-            return False, "SQL generation is not allowed by policy"
-        return True, "SQL generation allowed"
+        return await self.is_allowed(tenant_id, "allow_sql_generation")
 
-    async def check_schema_access_allowed(self, tenant_id: UUID) -> tuple[bool, str]:
+    async def check_schema_access_allowed(self, tenant_id: int) -> bool:
         """Check if schema access is allowed for the tenant."""
-        policy = await self.get_active_policy(tenant_id)
-        if not policy:
-            return True, "No policy configured, defaulting to allow"
-        if not policy.allow_schema_access:
-            return False, "Schema access is not allowed by policy"
-        return True, "Schema access allowed"
+        return await self.is_allowed(tenant_id, "allow_schema_access")
 
-    async def check_cross_dataset_join(self, tenant_id: UUID) -> tuple[bool, str]:
+    async def check_cross_dataset_join(self, tenant_id: int) -> bool:
         """Check if cross-dataset joins are allowed."""
-        policy = await self.get_active_policy(tenant_id)
-        if not policy:
-            return False, "No policy configured, cross-dataset joins disabled by default"
-        if not policy.allow_cross_dataset_join:
-            return False, "Cross-dataset joins are not allowed by policy"
-        return True, "Cross-dataset joins allowed"
+        return await self.is_allowed(tenant_id, "allow_cross_dataset_join")
 
-    async def get_sql_constraints(self, tenant_id: UUID) -> dict:
+    async def get_sql_constraints(self, tenant_id: int) -> dict:
         """Get SQL constraints from the policy."""
         policy = await self.get_active_policy(tenant_id)
         if not policy:
@@ -62,38 +64,35 @@ class AIPolicyService:
                 "max_result_rows": 10000,
                 "require_where_clause": True,
             }
+        rules = self._parse_rules(policy)
         return {
-            "max_sql_complexity": policy.max_sql_complexity,
-            "allowed_sql_types": policy.allowed_sql_types,
-            "max_result_rows": policy.max_result_rows,
-            "require_where_clause": policy.require_where_clause,
+            "max_sql_complexity": rules.get("max_sql_complexity", 3),
+            "allowed_sql_types": rules.get("allowed_sql_types", ["SELECT"]),
+            "max_result_rows": rules.get("max_result_rows", 10000),
+            "require_where_clause": rules.get("require_where_clause", True),
         }
 
     async def validate_sql_against_policy(
-        self, tenant_id: UUID, tables: list[str], join_count: int, sql_type: str = "SELECT"
+        self, tenant_id: int, tables: list, join_count: int, sql_type: str = "SELECT"
     ) -> tuple[bool, str]:
         """Validate generated SQL against the tenant's policy."""
         policy = await self.get_active_policy(tenant_id)
         if not policy:
             return True, "No policy configured"
 
-        # Check SQL type
-        if sql_type not in policy.allowed_sql_types:
-            return False, f"SQL type '{sql_type}' is not allowed. Allowed: {policy.allowed_sql_types}"
+        rules = self._parse_rules(policy)
 
-        # Check JOIN complexity
-        if join_count > policy.max_sql_complexity:
-            return False, f"SQL complexity ({join_count} JOINs) exceeds max allowed ({policy.max_sql_complexity})"
+        allowed_types = rules.get("allowed_sql_types", ["SELECT"])
+        if sql_type not in allowed_types:
+            return False, f"SQL type '{sql_type}' is not allowed. Allowed: {allowed_types}"
 
-        # Check blocked tables
-        if policy.blocked_tables:
-            for table in tables:
-                if table in policy.blocked_tables:
-                    return False, f"Table '{table}' is blocked by policy"
+        max_complexity = rules.get("max_sql_complexity", 3)
+        if join_count > max_complexity:
+            return False, f"SQL complexity ({join_count} JOINs) exceeds max allowed ({max_complexity})"
 
-        # Check allowed datasets
-        if policy.allowed_datasets:
-            # This would need dataset-to-table mapping; simplified here
-            pass
+        blocked = rules.get("blocked_tables", [])
+        for table in tables:
+            if table in blocked:
+                return False, f"Table '{table}' is blocked by policy"
 
         return True, "SQL passes policy validation"

@@ -1,5 +1,10 @@
 package com.enterprise.report.security;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.enterprise.report.entity.SysRole;
+import com.enterprise.report.mapper.SysRoleMapper;
+import com.enterprise.report.mapper.SysRolePermissionMapper;
+import com.enterprise.report.mapper.SysUserRoleMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +20,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -22,6 +29,9 @@ import java.util.ArrayList;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final SysUserRoleMapper userRoleMapper;
+    private final SysRoleMapper roleMapper;
+    private final SysRolePermissionMapper rolePermissionMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -41,9 +51,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 TenantContext.setTenantId(tenantId);
 
+                // Load user roles and permissions from database
+                List<String> roles = getUserRoles(userId);
+                List<String> permissions = getUserPermissions(userId);
+
                 UserDetailsImpl userDetails = new UserDetailsImpl(
                         userId, tenantId, username, "", "", "", 1,
-                        new ArrayList<>(), new ArrayList<>()
+                        roles, permissions
                 );
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -60,6 +74,51 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();
+        }
+    }
+
+    private List<String> getUserRoles(Long userId) {
+        try {
+            List<Long> roleIds = userRoleMapper.selectList(
+                    new LambdaQueryWrapper<com.enterprise.report.entity.SysUserRole>()
+                            .eq(com.enterprise.report.entity.SysUserRole::getUserId, userId))
+                    .stream()
+                    .map(com.enterprise.report.entity.SysUserRole::getRoleId)
+                    .collect(Collectors.toList());
+            if (roleIds.isEmpty()) return new ArrayList<>();
+            return roleMapper.selectBatchIds(roleIds).stream()
+                    .map(SysRole::getRoleCode)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("Failed to load user roles: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private List<String> getUserPermissions(Long userId) {
+        try {
+            List<String> roles = getUserRoles(userId);
+            if (roles.contains("SUPER_ADMIN")) {
+                return List.of("*"); // Super admin has all permissions
+            }
+            // Load permissions through role-permission mapping
+            List<Long> roleIds = userRoleMapper.selectList(
+                    new LambdaQueryWrapper<com.enterprise.report.entity.SysUserRole>()
+                            .eq(com.enterprise.report.entity.SysUserRole::getUserId, userId))
+                    .stream()
+                    .map(com.enterprise.report.entity.SysUserRole::getRoleId)
+                    .collect(Collectors.toList());
+            if (roleIds.isEmpty()) return new ArrayList<>();
+
+            return rolePermissionMapper.selectList(
+                    new LambdaQueryWrapper<com.enterprise.report.entity.SysRolePermission>()
+                            .in(com.enterprise.report.entity.SysRolePermission::getRoleId, roleIds))
+                    .stream()
+                    .map(rp -> String.valueOf(rp.getPermissionId()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("Failed to load user permissions: {}", e.getMessage());
+            return new ArrayList<>();
         }
     }
 
