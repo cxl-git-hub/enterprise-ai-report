@@ -44,25 +44,30 @@ defineProps<{
 
 .page-header-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
+  gap: 16px;
 }
 
 .page-title {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: #1a1a1a;
   margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: #999;
-  margin: 4px 0 0;
+  color: #888;
+  margin: 6px 0 0;
+  font-weight: 400;
 }
 
 .page-header-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 </style>
