@@ -45,6 +45,20 @@
             <p>AI正在分析数据，请稍候...</p>
           </div>
           <div v-else-if="analysisResult">
+            <!-- Export Actions -->
+            <div style="margin-bottom: 16px; text-align: right">
+              <a-dropdown>
+                <a-button size="small"><DownloadOutlined /> 导出分析结果</a-button>
+                <template #overlay>
+                  <a-menu @click="handleExportAnalysis">
+                    <a-menu-item key="csv">导出数据 CSV</a-menu-item>
+                    <a-menu-item key="json">导出完整结果 JSON</a-menu-item>
+                    <a-menu-item key="md">导出报告 Markdown</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </div>
+
             <!-- Narrative -->
             <div class="analysis-narrative">
               <h3>分析摘要</h3>
@@ -99,10 +113,11 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { ThunderboltOutlined } from '@ant-design/icons-vue'
+import { ThunderboltOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { datasetApi, type Dataset } from '@/api/dataset'
 import { post } from '@/api/request'
+import { exportTableData } from '@/utils/export'
 import * as echarts from 'echarts'
 
 const datasets = ref<Dataset[]>([])
@@ -167,6 +182,32 @@ function renderChart(chartData: AnalysisResult['chartData']) {
     })),
   }
   chart.setOption(option)
+}
+
+function handleExportAnalysis({ key }: { key: string }) {
+  if (!analysisResult.value) return
+  if (key === 'json') {
+    exportTableData('analysis_' + new Date().toISOString().slice(0, 10), [], [analysisResult.value], 'json')
+  } else if (key === 'md') {
+    const findings = (analysisResult.value.findings || []).map((f) => ({
+      type: f.type,
+      title: f.title,
+      description: f.description,
+    }))
+    exportTableData('analysis_findings_' + new Date().toISOString().slice(0, 10), ['type', 'title', 'description'], findings, 'md')
+  } else {
+    // CSV of chart data
+    if (analysisResult.value.chartData) {
+      const { categories, series } = analysisResult.value.chartData
+      const rows = categories.map((cat, i) => {
+        const row: Record<string, unknown> = { category: cat }
+        series.forEach((s) => (row[s.name] = s.data[i]))
+        return row
+      })
+      const cols = ['category', ...series.map((s) => s.name)]
+      exportTableData('analysis_data_' + new Date().toISOString().slice(0, 10), cols, rows, 'csv')
+    }
+  }
 }
 
 onMounted(async () => {

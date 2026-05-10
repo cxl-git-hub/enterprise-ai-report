@@ -110,6 +110,17 @@
           size="small"
           style="margin-top: 16px"
         >
+          <template #extra>
+            <a-dropdown>
+              <a-button size="small"><DownloadOutlined /> 导出</a-button>
+              <template #overlay>
+                <a-menu @click="handleExportResults">
+                  <a-menu-item key="csv">导出 CSV</a-menu-item>
+                  <a-menu-item key="json">导出 JSON</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+          </template>
           <a-table
             :columns="resultColumns"
             :data-source="queryResults"
@@ -153,10 +164,12 @@ import {
   CopyOutlined,
   FormatPainterOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { schemaApi, type Schema } from '@/api/schema'
 import { post } from '@/api/request'
+import { exportTableData } from '@/utils/export'
 
 const schemas = ref<Schema[]>([])
 const selectedSchemaId = ref<string>('')
@@ -272,6 +285,11 @@ function handleFormatSql() {
     .replace(/\bRIGHT JOIN\b/gi, '\nRIGHT JOIN')
     .trim()
   generatedSql.value = formatted
+}
+
+function handleExportResults({ key }: { key: string }) {
+  const cols = resultColumns.value.map((c) => c.dataIndex)
+  exportTableData('nl2sql_result_' + new Date().toISOString().slice(0, 10), cols, queryResults.value, key as 'csv' | 'json')
 }
 
 onMounted(async () => {

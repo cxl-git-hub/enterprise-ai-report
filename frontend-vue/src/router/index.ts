@@ -135,6 +135,24 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/audit/AuditLogView.vue'),
         meta: { title: '审计日志', icon: 'AuditOutlined', permission: 'audit:read' },
       },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/profile/ProfileView.vue'),
+        meta: { title: '个人中心', icon: 'UserOutlined', hidden: true },
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/settings/SettingsView.vue'),
+        meta: { title: '系统设置', icon: 'SettingOutlined', hidden: true },
+      },
+      {
+        path: 'notifications',
+        name: 'Notifications',
+        component: () => import('@/views/notifications/NotificationView.vue'),
+        meta: { title: '通知中心', icon: 'BellOutlined', hidden: true },
+      },
     ],
   },
   {

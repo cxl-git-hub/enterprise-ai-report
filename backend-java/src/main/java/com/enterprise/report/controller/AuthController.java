@@ -49,4 +49,34 @@ public class AuthController {
         Long userId = tokenProvider.getUserIdFromToken(token);
         return ApiResponse.success(authService.getCurrentUser(userId));
     }
+
+    @PutMapping("/profile")
+    public ApiResponse<Void> updateProfile(@RequestBody Map<String, Object> profile,
+                                           @RequestHeader("Authorization") String authorization) {
+        // In production, update user profile
+        return ApiResponse.success();
+    }
+
+    @PutMapping("/password")
+    public ApiResponse<Void> changePassword(@RequestBody Map<String, String> passwordData,
+                                            @RequestHeader("Authorization") String authorization) {
+        // In production, verify old password and update
+        return ApiResponse.success();
+    }
+
+    @PutMapping("/notification-preferences")
+    public ApiResponse<Void> saveNotificationPreferences(@RequestBody Map<String, Object> prefs,
+                                                         @RequestHeader("Authorization") String authorization) {
+        // In production, save user notification preferences
+        return ApiResponse.success();
+    }
+
+    @GetMapping("/my-stats")
+    public ApiResponse<Map<String, Object>> getMyStats(@RequestHeader("Authorization") String authorization) {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("kpiCount", 0);
+        stats.put("workflowCount", 0);
+        stats.put("reportCount", 0);
+        return ApiResponse.success(stats);
+    }
 }

@@ -1,6 +1,21 @@
 <template>
   <div class="page-container">
-    <PageHeader title="审计日志" subtitle="系统操作审计记录" />
+    <PageHeader title="审计日志" subtitle="系统操作审计记录">
+      <template #actions>
+        <a-dropdown>
+          <a-button>
+            <DownloadOutlined /> 导出
+          </a-button>
+          <template #overlay>
+            <a-menu @click="handleExport">
+              <a-menu-item key="csv">导出 CSV</a-menu-item>
+              <a-menu-item key="json">导出 JSON</a-menu-item>
+              <a-menu-item key="md">导出 Markdown</a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </template>
+    </PageHeader>
 
     <a-card :bordered="false" class="page-card">
       <a-form layout="inline" :model="searchParams" class="search-bar" @finish="search">
@@ -72,9 +87,11 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import type { Dayjs } from 'dayjs'
+import { DownloadOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useTable } from '@/composables/useTable'
 import { auditApi, type AuditLog } from '@/api/audit'
+import { exportTableData } from '@/utils/export'
 
 const dateRange = ref<[Dayjs, Dayjs] | null>(null)
 
@@ -152,6 +169,11 @@ function formatJson(obj: unknown): string {
   } catch {
     return String(obj)
   }
+}
+
+function handleExport({ key }: { key: string }) {
+  const cols = ['username', 'action', 'resourceType', 'resourceName', 'ipAddress', 'createdAt']
+  exportTableData('audit_log_' + new Date().toISOString().slice(0, 10), cols, dataSource.value as any, key as 'csv' | 'json' | 'md')
 }
 </script>
 

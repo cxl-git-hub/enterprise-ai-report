@@ -110,6 +110,7 @@
             @search="handleGlobalSearch"
             allow-clear
           />
+          <NotificationCenter style="margin-right: 16px" />
           <a-dropdown>
             <span class="user-info">
               <a-avatar :size="28" style="background-color: #1677ff">
@@ -119,7 +120,8 @@
             </span>
             <template #overlay>
               <a-menu @click="handleUserMenuClick">
-                <a-menu-item key="profile">个人设置</a-menu-item>
+                <a-menu-item key="profile">个人中心</a-menu-item>
+                <a-menu-item key="settings">系统设置</a-menu-item>
                 <a-menu-divider />
                 <a-menu-item key="logout">退出登录</a-menu-item>
               </a-menu>
@@ -159,6 +161,7 @@ import {
 } from '@ant-design/icons-vue'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
+import NotificationCenter from '@/components/common/NotificationCenter.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -199,6 +202,10 @@ function handleUserMenuClick({ key }: { key: string }) {
   if (key === 'logout') {
     authStore.logout()
     router.push('/login')
+  } else if (key === 'profile') {
+    router.push('/profile')
+  } else if (key === 'settings') {
+    router.push('/settings')
   }
 }
 

@@ -1,6 +1,15 @@
 <template>
   <div class="page-container">
-    <PageHeader title="工作流运行记录" subtitle="查看工作流运行状态和历史" />
+    <PageHeader title="工作流运行记录" subtitle="查看工作流运行状态和历史">
+      <template #actions>
+        <a-space>
+          <a-button @click="fetchData">
+            <ReloadOutlined /> 刷新
+          </a-button>
+          <a-switch v-model:checked="autoRefresh" checked-children="自动刷新" un-checked-children="手动" />
+        </a-space>
+      </template>
+    </PageHeader>
 
     <a-card :bordered="false" class="page-card">
       <a-form layout="inline" :model="searchParams" class="search-bar" @finish="search">
@@ -61,15 +70,33 @@
 </template>
 
 <script setup lang="ts">
-import { SearchOutlined } from '@ant-design/icons-vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { SearchOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useTable } from '@/composables/useTable'
 import { workflowApi, type WorkflowRun } from '@/api/workflow'
+
+const autoRefresh = ref(false)
+let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =
   useTable<WorkflowRun>({
     fetchApi: (params) => workflowApi.listRuns(params as { page: number; pageSize: number; workflowId?: string; status?: string }),
   })
+
+watch(autoRefresh, (val) => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+  if (val) {
+    refreshTimer = setInterval(fetchData, 5000) // Refresh every 5 seconds
+  }
+})
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 
 const columns = [
   { title: '工作流', dataIndex: 'workflowName', key: 'workflowName' },
