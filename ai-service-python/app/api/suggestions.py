@@ -45,7 +45,7 @@ async def suggest_columns(
 ):
     """AI-powered column definition suggestion based on schema name and description."""
     policy_service = AIPolicyService(db)
-    if not await policy_service.is_allowed(user.tenant_id, "allow_schema_access"):
+    if not await policy_service.is_allowed(user["tenant_id"], "allow_schema_access"):
         raise HTTPException(403, "AI schema access not allowed by policy")
 
     prompt_builder = PromptBuilder(db)
@@ -81,7 +81,7 @@ async def suggest_expression(
 ):
     """AI-powered KPI expression suggestion."""
     policy_service = AIPolicyService(db)
-    if not await policy_service.is_allowed(user.tenant_id, "allow_sql_generation"):
+    if not await policy_service.is_allowed(user["tenant_id"], "allow_sql_generation"):
         raise HTTPException(403, "AI expression generation not allowed by policy")
 
     prompt = f"""你是一个KPI计算专家。请根据以下KPI信息，建议合理的计算表达式。

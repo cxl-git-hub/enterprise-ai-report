@@ -44,10 +44,21 @@ class AIPolicyService:
             return []
 
     async def is_allowed(self, tenant_id: int, rule_name: str) -> bool:
-        """Check if a specific rule is allowed."""
+        """Check if a specific rule is allowed.
+
+        Checks direct column fields first (allow_sql_generation, allow_cross_dataset_join, etc.),
+        then falls back to the JSON config field.
+        """
         policy = await self.get_active_policy(tenant_id)
         if not policy:
             return True  # Default allow
+
+        # Check direct column fields first
+        direct_value = getattr(policy, rule_name, None)
+        if direct_value is not None:
+            return bool(direct_value)
+
+        # Fall back to JSON config
         config = self._parse_config(policy)
         return config.get(rule_name, True)
 

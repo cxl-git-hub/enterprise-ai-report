@@ -58,9 +58,8 @@ async def get_trace(
 
     if not trace:
         return ApiResponse(
-            success=False,
+            code=404,
             message="Trace not found",
-            error_code="NOT_FOUND",
         )
 
     return ApiResponse(data=TraceResponse.model_validate(trace))
