@@ -1,0 +1,170 @@
+@use './variables' as *;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: $font-family;
+  font-size: $font-size-base;
+  color: #333;
+  background: #f5f5f5;
+}
+
+#app {
+  height: 100%;
+}
+
+// Page container
+.page-container {
+  padding: 24px;
+  min-height: calc(100vh - #{$header-height} - 48px);
+}
+
+// Card styles
+.page-card {
+  background: #fff;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+// Table actions
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+// Status badges
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+
+  &--success { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+  &--error { background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; }
+  &--warning { background: #fffbe6; color: #faad14; border: 1px solid #ffe58f; }
+  &--processing { background: #e6f4ff; color: #1677ff; border: 1px solid #91caff; }
+  &--default { background: #fafafa; color: #999; border: 1px solid #d9d9d9; }
+}
+
+// Code editor container
+.code-editor {
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  overflow: hidden;
+
+  .cm-editor {
+    height: 300px;
+    font-size: 13px;
+  }
+}
+
+// Timeline
+.execution-timeline {
+  .ant-timeline-item {
+    padding-bottom: 16px;
+  }
+}
+
+// Dependency graph
+.dependency-graph {
+  min-height: 400px;
+  background: #fafafa;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  padding: 16px;
+}
+
+// Fullscreen layout
+.fullscreen-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+// Scrollable container
+.scrollable {
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+// JSON viewer
+.json-viewer {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: $border-radius;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+// Trace panel
+.trace-panel {
+  .ant-collapse-header {
+    font-weight: 500;
+  }
+}
+
+// Login form
+.login-card {
+  width: 400px;
+  border-radius: 12px;
+  box-shadow: $box-shadow-lg;
+}
+
+// Stat card
+.stat-card {
+  text-align: center;
+  padding: 20px;
+  border-radius: $border-radius;
+  background: #fff;
+  box-shadow: $box-shadow;
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: $primary-color;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: #999;
+    margin-top: 4px;
+  }
+}
+
+// Diff view
+.diff-view {
+  font-family: 'Consolas', monospace;
+  font-size: 13px;
+
+  .diff-add {
+    background: #e6ffec;
+    color: #22863a;
+  }
+
+  .diff-remove {
+    background: #ffeef0;
+    color: #cb2431;
+  }
+}
+
+// NProgress customization
+#nprogress .bar {
+  background: $primary-color !important;
+  height: 3px !important;
+}

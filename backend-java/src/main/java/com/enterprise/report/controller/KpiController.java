@@ -1,0 +1,86 @@
+package com.enterprise.report.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.enterprise.report.dto.ApiResponse;
+import com.enterprise.report.dto.PageResult;
+import com.enterprise.report.dto.kpi.KpiCreateRequest;
+import com.enterprise.report.dto.kpi.KpiExecuteRequest;
+import com.enterprise.report.dto.kpi.KpiResponse;
+import com.enterprise.report.entity.KpiDefinition;
+import com.enterprise.report.exception.BusinessException;
+import com.enterprise.report.security.TenantContext;
+import com.enterprise.report.service.KpiService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+
+@RestController
+@RequestMapping("/api/kpis")
+@RequiredArgsConstructor
+public class KpiController {
+
+    private final KpiService kpiService;
+
+    @GetMapping
+    public ApiResponse<PageResult<KpiDefinition>> list(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String keyword) {
+        LambdaQueryWrapper<KpiDefinition> wrapper = new LambdaQueryWrapper<>();
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(KpiDefinition::getName, keyword);
+        }
+        wrapper.orderByDesc(KpiDefinition::getCreatedAt);
+        return ApiResponse.success(PageResult.from(kpiService.page(new Page<>(page, size), wrapper)));
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<KpiDefinition> get(@PathVariable Long id) {
+        KpiDefinition kpi = kpiService.getById(id);
+        if (kpi == null) {
+            throw new BusinessException(404, "KPI not found");
+        }
+        return ApiResponse.success(kpi);
+    }
+
+    @PostMapping
+    public ApiResponse<KpiDefinition> create(@RequestBody KpiCreateRequest request) {
+        KpiDefinition kpi = new KpiDefinition();
+        kpi.setTenantId(TenantContext.getTenantId());
+        kpi.setName(request.getName());
+        kpi.setDescription(request.getDescription());
+        kpi.setSchemaId(request.getSchemaId());
+        kpi.setDatasetId(request.getDatasetId());
+        kpi.setExpression(request.getExpression());
+        kpi.setUnit(request.getUnit());
+        kpi.setAggregationType(request.getAggregationType());
+        kpi.setFilterCondition(request.getFilterCondition());
+        kpi.setGroupBy(request.getGroupBy());
+        kpi.setConfig(request.getConfig());
+        kpi.setVersion(1);
+        kpi.setStatus(1);
+        kpiService.save(kpi);
+        return ApiResponse.success(kpi);
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<KpiDefinition> update(@PathVariable Long id, @RequestBody KpiDefinition kpi) {
+        kpi.setId(id);
+        kpiService.updateById(kpi);
+        return ApiResponse.success(kpi);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        kpiService.removeById(id);
+        return ApiResponse.success();
+    }
+
+    @PostMapping("/execute")
+    public ApiResponse<BigDecimal> execute(@Valid @RequestBody KpiExecuteRequest request) {
+        return ApiResponse.success(kpiService.executeKpi(request));
+    }
+}

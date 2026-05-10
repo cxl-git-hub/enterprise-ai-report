@@ -1,0 +1,38 @@
+{
+  "name": "enterprise-ai-report-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.ts,.tsx"
+  },
+  "dependencies": {
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "pinia": "^2.1.7",
+    "ant-design-vue": "^4.1.2",
+    "@ant-design/icons-vue": "^7.0.1",
+    "axios": "^1.6.7",
+    "dayjs": "^1.11.10",
+    "echarts": "^5.5.0",
+    "vue-echarts": "^6.6.9",
+    "codemirror": "^6.0.1",
+    "@codemirror/lang-sql": "^6.6.2",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "vue-codemirror": "^6.1.1",
+    "nprogress": "^0.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.1.6",
+    "vue-tsc": "^2.0.6",
+    "typescript": "^5.3.3",
+    "sass": "^1.71.1",
+    "@types/node": "^20.11.24",
+    "@types/nprogress": "^0.2.3"
+  }
+}
