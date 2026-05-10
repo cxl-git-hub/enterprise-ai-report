@@ -238,7 +238,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -418,7 +418,37 @@ async function loadRunDetail() {
   }
 }
 
-onMounted(loadRunDetail)
+// Auto-refresh when workflow is running
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer)
+  autoRefreshTimer = setInterval(async () => {
+    if (runDetail.value?.status === 'running' || runDetail.value?.status === 'pending') {
+      await loadRunDetail()
+    } else {
+      stopAutoRefresh()
+    }
+  }, 3000) // Refresh every 3 seconds when running
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer)
+    autoRefreshTimer = null
+  }
+}
+
+onMounted(async () => {
+  await loadRunDetail()
+  if (runDetail.value?.status === 'running' || runDetail.value?.status === 'pending') {
+    startAutoRefresh()
+  }
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()
+})
 </script>
 
 <style lang="scss" scoped>

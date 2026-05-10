@@ -136,6 +136,45 @@ html, body {
 .table-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+// Mobile responsive utilities
+@media (max-width: 768px) {
+  .page-container {
+    padding: 12px;
+  }
+
+  .page-card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .search-bar {
+    .ant-form-item {
+      margin-bottom: 8px;
+    }
+  }
+
+  // Stack tables horizontally on mobile
+  .ant-table {
+    font-size: 13px;
+  }
+
+  // Modal responsive
+  .ant-modal {
+    max-width: calc(100vw - 16px);
+    margin: 8px;
+  }
+
+  .ant-modal-content {
+    border-radius: 8px;
+  }
+
+  // Form responsive
+  .ant-form-item-label > label {
+    font-size: 13px;
+  }
 }
 
 // Status badges

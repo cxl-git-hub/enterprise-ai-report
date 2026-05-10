@@ -1,6 +1,15 @@
 <template>
   <div class="page-container">
-    <PageHeader title="仪表盘" subtitle="系统运行概览" />
+    <PageHeader title="仪表盘" subtitle="系统运行概览">
+      <template #actions>
+        <a-space>
+          <a-switch v-model:checked="autoRefresh" checked-children="自动刷新" un-checked-children="手动" />
+          <a-button @click="refreshAll" :loading="statsLoading || runsLoading">
+            <ReloadOutlined /> 刷新
+          </a-button>
+        </a-space>
+      </template>
+    </PageHeader>
 
     <a-row :gutter="16" class="stat-row">
       <a-col :xs="12" :sm="12" :md="6" v-for="(item, idx) in statItems" :key="idx">
@@ -56,12 +65,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, markRaw, watch } from 'vue'
 import {
   DatabaseOutlined,
   FundOutlined,
   ApartmentOutlined,
   FileTextOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { get } from '@/api/request'
@@ -213,10 +223,31 @@ function initChart(data: Array<{ value: number; name: string; color: string }>) 
   })
 }
 
-onMounted(() => {
+function refreshAll() {
   loadStats()
   loadRecentRuns()
   loadKpiChart()
+}
+
+const autoRefresh = ref(false)
+let refreshTimer: ReturnType<typeof setInterval> | null = null
+
+watch(autoRefresh, (val) => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+  if (val) {
+    refreshTimer = setInterval(refreshAll, 30000) // Refresh every 30 seconds
+  }
+})
+
+onMounted(() => {
+  refreshAll()
+})
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
 })
 </script>
 
@@ -232,6 +263,12 @@ onMounted(() => {
   text-align: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   min-height: 120px;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
 
   :deep(.ant-spin-nested-loading) {
     min-height: auto;
@@ -264,6 +301,29 @@ onMounted(() => {
     font-size: 14px;
     color: #999;
     margin-top: 4px;
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 12px;
+    min-height: 90px;
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+    }
   }
 }
 </style>

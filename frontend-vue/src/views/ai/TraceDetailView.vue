@@ -16,10 +16,9 @@
           <a-card :bordered="false" class="page-card">
             <a-row :gutter="16">
               <a-col :xs="12" :sm="8" :md="4">
-                  <a-tag :color="typeColor[traceDetail.traceType] || 'default'" style="font-size: 14px">
-                    {{ typeLabel[traceDetail.traceType] || traceDetail.traceType }}
-                  </a-tag>
-                </div>
+                <a-tag :color="typeColor[traceDetail.traceType] || 'default'" style="font-size: 14px">
+                  {{ typeLabel[traceDetail.traceType] || traceDetail.traceType }}
+                </a-tag>
               </a-col>
               <a-col :xs="12" :sm="8" :md="4">
                 <div class="stat-item">

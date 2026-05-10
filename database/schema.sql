@@ -511,6 +511,49 @@ CREATE TABLE `report_output` (
 -- 11. SYSTEM AUDIT
 -- ============================================================
 
+-- ============================================================
+-- 12. NOTIFICATIONS
+-- ============================================================
+
+CREATE TABLE `notification` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `tenant_id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL COMMENT '接收用户ID',
+  `type` VARCHAR(16) NOT NULL COMMENT 'success/error/warning/info',
+  `title` VARCHAR(256) DEFAULT NULL COMMENT '通知标题',
+  `message` TEXT NOT NULL COMMENT '通知内容',
+  `link` VARCHAR(512) DEFAULT NULL COMMENT '关联链接',
+  `is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '0=未读 1=已读',
+  `source_type` VARCHAR(32) DEFAULT NULL COMMENT '来源类型: workflow/report/system',
+  `source_id` VARCHAR(64) DEFAULT NULL COMMENT '来源ID',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_tenant_user` (`tenant_id`, `user_id`),
+  KEY `idx_is_read` (`is_read`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB COMMENT='通知表';
+
+-- ============================================================
+-- 13. SYSTEM SETTINGS
+-- ============================================================
+
+CREATE TABLE `system_setting` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `tenant_id` BIGINT NOT NULL,
+  `setting_group` VARCHAR(32) NOT NULL COMMENT '设置组: appearance/ai/notification/security/advanced',
+  `setting_key` VARCHAR(128) NOT NULL COMMENT '设置键',
+  `setting_value` JSON DEFAULT NULL COMMENT '设置值',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tenant_group_key` (`tenant_id`, `setting_group`, `setting_key`),
+  KEY `idx_tenant_group` (`tenant_id`, `setting_group`)
+) ENGINE=InnoDB COMMENT='系统设置表';
+
+-- ============================================================
+-- 14. SYSTEM AUDIT (continued)
+-- ============================================================
+
 CREATE TABLE `audit_log` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `tenant_id` BIGINT NOT NULL,

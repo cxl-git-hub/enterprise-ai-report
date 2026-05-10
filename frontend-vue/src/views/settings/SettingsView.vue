@@ -48,7 +48,7 @@
                   class="color-swatch"
                   :class="{ active: settings.primaryColor === color }"
                   :style="{ background: color }"
-                  @click="settings.primaryColor = color"
+                  @click="handleColorChange(color)"
                 />
               </div>
             </a-form-item>
@@ -320,8 +320,13 @@ const advanced = reactive({
 })
 
 function handleThemeChange(e: { target: { value: string } }) {
-  const theme = e.target.value as 'light' | 'dark'
+  const theme = e.target.value as 'light' | 'dark' | 'auto'
   appStore.setTheme(theme)
+}
+
+function handleColorChange(color: string) {
+  settings.primaryColor = color
+  appStore.setPrimaryColor(color)
 }
 
 async function saveSettings() {

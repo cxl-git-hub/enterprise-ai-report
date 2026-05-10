@@ -81,7 +81,7 @@ import { message, Modal } from 'ant-design-vue'
 import { CheckOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useTable } from '@/composables/useTable'
-import { put, del } from '@/api/request'
+import { get, put, del } from '@/api/request'
 
 const router = useRouter()
 
@@ -101,10 +101,7 @@ const typeLabel: Record<string, string> = {
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, resetSearch } =
   useTable<any>({
-    fetchApi: (params) => {
-      const { get } = require('@/api/request')
-      return get('/notifications', params)
-    },
+    fetchApi: (params) => get('/notifications', params),
   })
 
 const unreadCount = computed(() => dataSource.value.filter((n: any) => !n.read).length)

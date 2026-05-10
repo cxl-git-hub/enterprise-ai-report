@@ -1,5 +1,12 @@
 <template>
   <a-layout class="main-layout">
+    <!-- Mobile overlay -->
+    <div
+      v-if="isMobile && !appStore.sidebarCollapsed"
+      class="mobile-overlay"
+      @click="appStore.toggleSidebar()"
+    />
+
     <a-layout-sider
       v-model:collapsed="appStore.sidebarCollapsed"
       :trigger="null"
@@ -8,6 +15,7 @@
       :collapsed-width="80"
       theme="dark"
       class="main-sider"
+      :class="{ 'mobile-sider': isMobile }"
     >
       <div class="logo">
         <ThunderboltOutlined class="logo-icon" />
@@ -144,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -171,6 +179,17 @@ const authStore = useAuthStore()
 const selectedKeys = ref<string[]>([route.path])
 const openKeys = ref<string[]>([])
 const globalSearch = ref('')
+const isMobile = ref(window.innerWidth < 768)
+
+function checkMobile() {
+  isMobile.value = window.innerWidth < 768
+  if (isMobile.value) {
+    appStore.sidebarCollapsed = true
+  }
+}
+
+onMounted(() => window.addEventListener('resize', checkMobile))
+onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
 const contentMargin = computed(() => appStore.sidebarCollapsed ? '80px' : '256px')
 
@@ -348,5 +367,54 @@ function handleGlobalSearch(value: string) {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+// Mobile overlay
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9;
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .main-sider.mobile-sider {
+    position: fixed !important;
+    z-index: 11;
+    transform: translateX(0);
+
+    &.ant-layout-sider-collapsed {
+      transform: translateX(-100%);
+    }
+  }
+
+  .main-header {
+    padding: 0 12px !important;
+    margin-left: 0 !important;
+
+    .breadcrumb {
+      display: none;
+    }
+
+    .header-right {
+      .ant-input-search {
+        width: 120px !important;
+        margin-right: 8px !important;
+      }
+
+      .username {
+        display: none;
+      }
+    }
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 12px !important;
+  }
 }
 </style>
