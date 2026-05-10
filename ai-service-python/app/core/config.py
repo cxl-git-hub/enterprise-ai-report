@@ -26,13 +26,20 @@ class Settings(BaseSettings):
     MINIO_BUCKET: str = "ai-reports"
     MINIO_SECURE: bool = False
 
-    # LLM
+    # LLM Configuration
+    # Provider: openai | anthropic | ollama | vllm | azure | deepseek | zhipu | moonshot | qwen | custom
     LLM_PROVIDER: str = "openai"
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.openai.com/v1"
     LLM_MODEL: str = "gpt-4o"
     LLM_MAX_TOKENS: int = 4096
     LLM_TEMPERATURE: float = 0.1
+    LLM_TIMEOUT: float = 120.0
+    LLM_API_VERSION: str = "2024-02-01"  # For Azure OpenAI
+    LLM_EXTRA_HEADERS: Optional[str] = None  # JSON string of extra headers
+
+    # CORS
+    CORS_ORIGINS: Optional[str] = None
 
     # JWT
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -44,7 +51,7 @@ class Settings(BaseSettings):
     SQL_MAX_JOINS: int = 3
     PROMPT_MAX_TOKENS: int = 128000
 
-    # Cost Tracking
+    # Cost Tracking (per 1K tokens, in USD)
     COST_PER_1K_PROMPT_TOKENS: float = 0.005
     COST_PER_1K_COMPLETION_TOKENS: float = 0.015
 

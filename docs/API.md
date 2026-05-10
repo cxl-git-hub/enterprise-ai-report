@@ -1,6 +1,6 @@
 # API 接口文档
 
-> 最后更新: 2026-05-10
+> 最后更新: 2026-05-11
 
 ## 基础信息
 
@@ -8,6 +8,8 @@
 - **认证方式**: JWT Bearer Token
 - **Content-Type**: `application/json`
 - **多租户**: 通过 Header `X-Tenant-Id` 传递租户ID
+- **API限流**: 100次/分钟/租户 (Redis滑动窗口)
+- **Swagger文档**: `http://localhost:8080/swagger-ui.html`
 
 ## 通用响应格式
 

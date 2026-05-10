@@ -16,6 +16,7 @@ from app.services.ai_policy_service import AIPolicyService
 from app.services.sql_validator import SQLValidator
 from app.services.prompt_builder import PromptBuilder
 from app.services.cost_tracker import CostTracker
+from app.services.llm_client import get_llm_client
 from app.prompts.nl2sql_system import NL2SQL_SYSTEM_PROMPT
 from app.safety.prompt_guard import PromptGuard
 
@@ -132,47 +133,34 @@ async def build_prompt(state: NL2SQLState, db: AsyncSession) -> Dict[str, Any]:
 
 
 async def llm_generate_sql(state: NL2SQLState, db: AsyncSession) -> Dict[str, Any]:
-    """Call the LLM to generate SQL."""
+    """Call the LLM to generate SQL using the unified client."""
     system_prompt = state.get("system_prompt", "")
     user_prompt = state.get("user_prompt", "")
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            f"{settings.LLM_BASE_URL}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.LLM_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": settings.LLM_MODEL,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "max_tokens": settings.LLM_MAX_TOKENS,
-                "temperature": settings.LLM_TEMPERATURE,
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
+    llm = get_llm_client()
+    result = await llm.chat(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
 
-    raw_output = data["choices"][0]["message"]["content"]
-    usage = data.get("usage", {})
+    raw_output = result["content"]
 
     cost_tracker = CostTracker(db)
-    prompt_tokens = usage.get("prompt_tokens", 0)
-    completion_tokens = usage.get("completion_tokens", 0)
+    prompt_tokens = result["prompt_tokens"]
+    completion_tokens = result["completion_tokens"]
     cost = cost_tracker.calculate_cost_for_model(
-        prompt_tokens, completion_tokens, settings.LLM_MODEL
+        prompt_tokens, completion_tokens, result["model"]
     )
 
     return {
         "raw_llm_output": raw_output,
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
-        "total_tokens": prompt_tokens + completion_tokens,
+        "total_tokens": result["total_tokens"],
         "cost_usd": state.get("cost_usd", 0.0) + cost,
-        "model_name": settings.LLM_MODEL,
+        "model_name": result["model"],
     }
 
 
