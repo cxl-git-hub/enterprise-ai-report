@@ -215,6 +215,10 @@ watch(
 
 function handleMenuClick({ key }: { key: string }) {
   router.push(key)
+  // Auto-close sidebar on mobile
+  if (isMobile.value) {
+    appStore.sidebarCollapsed = true
+  }
 }
 
 function handleUserMenuClick({ key }: { key: string }) {
