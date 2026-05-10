@@ -3,6 +3,7 @@ package com.enterprise.report.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.enterprise.report.dto.ApiResponse;
 import com.enterprise.report.entity.*;
+import com.enterprise.report.mapper.AiExecutionTraceMapper;
 import com.enterprise.report.security.TenantContext;
 import com.enterprise.report.service.*;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class DashboardController {
     private final WorkflowService workflowService;
     private final ReportOutputService reportOutputService;
     private final WorkflowExecutionService workflowExecutionService;
+    private final AiExecutionTraceMapper aiTraceMapper;
 
     @GetMapping("/stats")
     public ApiResponse<Map<String, Object>> getStats() {
@@ -103,5 +105,29 @@ public class DashboardController {
         });
 
         return ApiResponse.success(result);
+    }
+
+    @GetMapping("/ai-stats")
+    public ApiResponse<Map<String, Object>> getAiStats() {
+        Long tenantId = TenantContext.getTenantId();
+        Map<String, Object> stats = new HashMap<>();
+
+        List<AiExecutionTrace> traces = aiTraceMapper.selectList(
+                new LambdaQueryWrapper<AiExecutionTrace>()
+                        .eq(AiExecutionTrace::getTenantId, tenantId));
+
+        long totalTokens = traces.stream()
+                .mapToLong(t -> t.getTotalTokens() != null ? t.getTotalTokens() : 0).sum();
+        double totalCost = traces.stream()
+                .mapToDouble(t -> t.getCost() != null ? t.getCost().doubleValue() : 0).sum();
+        long successCount = traces.stream()
+                .filter(t -> "success".equals(t.getStatus())).count();
+
+        stats.put("totalCalls", traces.size());
+        stats.put("totalTokens", totalTokens);
+        stats.put("totalCost", Math.round(totalCost * 100.0) / 100.0);
+        stats.put("successRate", traces.isEmpty() ? 0 : Math.round(successCount * 100.0 / traces.size()));
+
+        return ApiResponse.success(stats);
     }
 }

@@ -62,6 +62,32 @@
         </a-card>
       </a-col>
     </a-row>
+
+    <!-- AI Usage Stats -->
+    <a-row :gutter="16" style="margin-top: 16px">
+      <a-col :xs="24">
+        <a-card title="AI用量统计" :bordered="false" class="page-card">
+          <a-spin :spinning="aiStatsLoading">
+            <a-row :gutter="16">
+              <a-col :xs="12" :sm="12" :md="6">
+                <a-statistic title="AI调用次数" :value="aiStats.totalCalls" :value-style="{ color: '#1677ff' }">
+                  <template #prefix><ThunderboltOutlined /></template>
+                </a-statistic>
+              </a-col>
+              <a-col :xs="12" :sm="12" :md="6">
+                <a-statistic title="总Token消耗" :value="formatTokens(aiStats.totalTokens)" :value-style="{ color: '#52c41a' }" />
+              </a-col>
+              <a-col :xs="12" :sm="12" :md="6">
+                <a-statistic title="总费用" :value="`$${aiStats.totalCost}`" :value-style="{ color: '#fa8c16' }" />
+              </a-col>
+              <a-col :xs="12" :sm="12" :md="6">
+                <a-statistic title="成功率" :value="`${aiStats.successRate}%`" :value-style="{ color: aiStats.successRate >= 90 ? '#52c41a' : '#ff4d4f' }" />
+              </a-col>
+            </a-row>
+          </a-spin>
+        </a-card>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
@@ -73,6 +99,7 @@ import {
   ApartmentOutlined,
   FileTextOutlined,
   ReloadOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { get } from '@/api/request'
@@ -98,7 +125,15 @@ const kpiChartRef = ref<HTMLElement>()
 const statsLoading = ref(true)
 const runsLoading = ref(true)
 const chartLoading = ref(true)
+const aiStatsLoading = ref(true)
 let chartInstance: echarts.ECharts | null = null
+
+const aiStats = reactive({
+  totalCalls: 0,
+  totalTokens: 0,
+  totalCost: 0,
+  successRate: 0,
+})
 
 const statItems = computed(() => [
   { icon: markRaw(DatabaseOutlined), value: stats.datasourceCount, label: '数据源', bg: '#e6f4ff', color: '#1677ff' },
@@ -144,6 +179,13 @@ function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
   return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`
+}
+
+function formatTokens(n: number): string {
+  if (!n) return '0'
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
+  return n.toString()
 }
 
 async function loadStats() {
@@ -201,6 +243,23 @@ async function loadKpiChart() {
   }
 }
 
+async function loadAiStats() {
+  aiStatsLoading.value = true
+  try {
+    const res = await get<{ data: { totalCalls: number; totalTokens: number; totalCost: number; successRate: number } }>('/dashboard/ai-stats')
+    if (res?.data) {
+      aiStats.totalCalls = res.data.totalCalls ?? 0
+      aiStats.totalTokens = res.data.totalTokens ?? 0
+      aiStats.totalCost = res.data.totalCost ?? 0
+      aiStats.successRate = res.data.successRate ?? 0
+    }
+  } catch {
+    // Show 0 on error
+  } finally {
+    aiStatsLoading.value = false
+  }
+}
+
 function initChart(data: Array<{ value: number; name: string; color: string }>) {
   if (!kpiChartRef.value) return
   if (chartInstance) {
@@ -232,6 +291,7 @@ function refreshAll() {
   loadStats()
   loadRecentRuns()
   loadKpiChart()
+  loadAiStats()
 }
 
 const autoRefresh = ref(false)

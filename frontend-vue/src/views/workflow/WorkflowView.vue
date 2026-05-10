@@ -58,6 +58,24 @@
       </a-table>
     </a-card>
 
+    <!-- Trigger Params Modal -->
+    <a-modal
+      v-model:open="triggerModalVisible"
+      title="触发工作流"
+      @ok="handleTriggerConfirm"
+      :confirm-loading="triggeringId !== null"
+      width="500px"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="日期范围">
+          <a-month-picker v-model:value="triggerParams.dateRange" style="width: 100%" placeholder="选择月份" />
+        </a-form-item>
+        <a-form-item label="通知邮箱">
+          <a-input v-model:value="triggerParams.notifyEmail" placeholder="报表生成后通知的邮箱（可选）" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
     <!-- Form Modal -->
     <a-modal
       v-model:open="modalVisible"
@@ -207,6 +225,13 @@ const router = useRouter()
 const triggeringId = ref<string | null>(null)
 const nodesJson = ref('')
 const showJsonEdit = ref(false)
+
+const triggerModalVisible = ref(false)
+const triggerParams = reactive({
+  dateRange: null as any,
+  notifyEmail: '',
+})
+const pendingTriggerWorkflow = ref<Workflow | null>(null)
 
 interface DagNodeItem {
   id: string
@@ -393,14 +418,30 @@ function toggleJsonEdit() {
 }
 
 async function handleTrigger(record: Workflow) {
-  triggeringId.value = record.id
+  pendingTriggerWorkflow.value = record
+  triggerParams.dateRange = null
+  triggerParams.notifyEmail = ''
+  triggerModalVisible.value = true
+}
+
+async function handleTriggerConfirm() {
+  if (!pendingTriggerWorkflow.value) return
+  triggeringId.value = pendingTriggerWorkflow.value.id
+  triggerModalVisible.value = false
   try {
-    await workflowApi.trigger(record.id, {})
+    const params: Record<string, unknown> = {}
+    if (triggerParams.dateRange) {
+      params.dateRange = triggerParams.dateRange.format ? triggerParams.dateRange.format('YYYY-MM') : triggerParams.dateRange
+    }
+    if (triggerParams.notifyEmail) {
+      params.notifyEmail = triggerParams.notifyEmail
+    }
+    await workflowApi.trigger(pendingTriggerWorkflow.value.id, params)
     message.success('工作流已触发')
-    // Navigate to run list to see progress
     router.push('/workflow/runs')
   } finally {
     triggeringId.value = null
+    pendingTriggerWorkflow.value = null
   }
 }
 

@@ -322,6 +322,11 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
         }
 
         SnapshotDiff diff = new SnapshotDiff();
+        diff.setSnapshot1Name(snap1.getSnapshotName());
+        diff.setSnapshot2Name(snap2.getSnapshotName());
+        diff.setSnapshot1Time(snap1.getCreatedAt());
+        diff.setSnapshot2Time(snap2.getCreatedAt());
+
         List<SnapshotDiff.Change> changes = new ArrayList<>();
 
         try {
@@ -340,12 +345,14 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
                     if (i >= list1.size()) {
                         SnapshotDiff.Change change = new SnapshotDiff.Change();
                         change.setType("added");
+                        change.setSection(key);
                         change.setPath(key + "[" + i + "]");
                         change.setNewValue(list2.get(i));
                         changes.add(change);
                     } else if (i >= list2.size()) {
                         SnapshotDiff.Change change = new SnapshotDiff.Change();
                         change.setType("removed");
+                        change.setSection(key);
                         change.setPath(key + "[" + i + "]");
                         change.setOldValue(list1.get(i));
                         changes.add(change);
@@ -354,7 +361,8 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
                         String json2 = objectMapper.writeValueAsString(list2.get(i));
                         if (!json1.equals(json2)) {
                             SnapshotDiff.Change change = new SnapshotDiff.Change();
-                            change.setType("modified");
+                            change.setType("changed");
+                            change.setSection(key);
                             change.setPath(key + "[" + i + "]");
                             change.setOldValue(list1.get(i));
                             change.setNewValue(list2.get(i));
@@ -368,6 +376,7 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
         }
 
         diff.setChanges(changes);
+        diff.setTotalChanges(changes.size());
         return diff;
     }
 

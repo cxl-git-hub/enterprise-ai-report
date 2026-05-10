@@ -79,9 +79,10 @@
             <a-form-item label="输出格式" name="format">
               <a-select v-model:value="formState.format" placeholder="请选择格式">
                 <a-select-option value="pdf">PDF</a-select-option>
+                <a-select-option value="docx">Word</a-select-option>
+                <a-select-option value="pptx">PowerPoint</a-select-option>
                 <a-select-option value="excel">Excel</a-select-option>
                 <a-select-option value="html">HTML</a-select-option>
-                <a-select-option value="docx">Word</a-select-option>
               </a-select>
             </a-form-item>
           </a-col>

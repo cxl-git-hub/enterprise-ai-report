@@ -76,6 +76,8 @@ public class ReportOutputController {
             case WORD -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
             case PPT -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
             case PDF -> "application/pdf";
+            case EXCEL -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case HTML -> "text/html";
         };
     }
 }

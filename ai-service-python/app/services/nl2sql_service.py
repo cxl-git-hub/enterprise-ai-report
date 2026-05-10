@@ -129,12 +129,12 @@ class NL2SQLService:
         if not result.is_valid:
             return {"success": False, "error": "SQL validation failed: " + "; ".join(result.errors)}
 
-        try:
-            return {
-                "success": True,
-                "columns": [],
-                "rows": [],
-                "row_count": 0,
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        # In production, this would execute against the actual data source
+        # For now, return a success response indicating the SQL is valid
+        return {
+            "success": True,
+            "columns": [],
+            "rows": [],
+            "row_count": 0,
+            "message": "SQL验证通过。在生产环境中，此查询将连接数据源执行。",
+        }
