@@ -33,9 +33,9 @@
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'outputFormat'">
-            <a-tag :color="formatColor[record.outputFormat] || 'default'">
-              {{ (record.outputFormat || '').toUpperCase() }}
+          <template v-if="column.key === 'format'">
+            <a-tag :color="formatColor[record.format] || 'default'">
+              {{ (record.format || '').toUpperCase() }}
             </a-tag>
           </template>
           <template v-if="column.key === 'fileSize'">
@@ -43,8 +43,8 @@
           </template>
           <template v-if="column.key === 'status'">
             <a-badge
-              :status="record.status === 'completed' ? 'success' : record.status === 'generating' ? 'processing' : 'default'"
-              :text="record.status === 'completed' ? '已完成' : record.status === 'generating' ? '生成中' : record.status"
+              :status="record.status === 1 ? 'success' : record.status === 0 ? 'processing' : 'default'"
+              :text="record.status === 1 ? '已完成' : record.status === 0 ? '生成中' : '未知'"
             />
           </template>
           <template v-if="column.key === 'action'">
@@ -89,9 +89,8 @@ const { loading, dataSource, pagination, searchParams, fetchData, handleTableCha
   })
 
 const columns = [
-  { title: '报表名称', dataIndex: 'reportName', key: 'reportName' },
-  { title: '模板', dataIndex: 'templateName', key: 'templateName' },
-  { title: '格式', dataIndex: 'outputFormat', key: 'outputFormat', width: 80 },
+  { title: '报表名称', dataIndex: 'name', key: 'name' },
+  { title: '格式', dataIndex: 'format', key: 'format', width: 80 },
   { title: '文件大小', dataIndex: 'fileSize', key: 'fileSize', width: 120 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '生成时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
@@ -113,7 +112,7 @@ async function handleDownload(record: ReportOutput) {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${record.reportName || record.name}.${record.outputFormat || record.format}`
+    link.download = `${record.name || 'report'}.${record.format || 'pdf'}`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

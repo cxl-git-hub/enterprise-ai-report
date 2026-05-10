@@ -192,6 +192,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, SearchOutlined, ThunderboltOutlined, DeleteOutlined, CodeOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -202,6 +203,7 @@ import { workflowApi, type Workflow, type WorkflowForm, type WorkflowNode } from
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
+const router = useRouter()
 const triggeringId = ref<string | null>(null)
 const nodesJson = ref('')
 const showJsonEdit = ref(false)
@@ -393,8 +395,10 @@ function toggleJsonEdit() {
 async function handleTrigger(record: Workflow) {
   triggeringId.value = record.id
   try {
-    await workflowApi.trigger(record.id)
+    await workflowApi.trigger(record.id, {})
     message.success('工作流已触发')
+    // Navigate to run list to see progress
+    router.push('/workflow/runs')
   } finally {
     triggeringId.value = null
   }

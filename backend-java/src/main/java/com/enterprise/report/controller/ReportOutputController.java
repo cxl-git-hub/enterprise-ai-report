@@ -5,8 +5,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.enterprise.report.dto.ApiResponse;
 import com.enterprise.report.dto.PageResult;
 import com.enterprise.report.entity.ReportOutput;
+import com.enterprise.report.exception.BusinessException;
+import com.enterprise.report.service.MinioService;
 import com.enterprise.report.service.ReportOutputService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class ReportOutputController {
 
     private final ReportOutputService reportOutputService;
+    private final MinioService minioService;
 
     @GetMapping
     public ApiResponse<PageResult<ReportOutput>> list(
@@ -35,7 +42,32 @@ public class ReportOutputController {
     }
 
     @GetMapping("/{id}/download")
-    public ApiResponse<String> download(@PathVariable Long id) {
-        return ApiResponse.success(reportOutputService.getDownloadUrl(id));
+    public ResponseEntity<InputStreamResource> download(@PathVariable Long id) {
+        ReportOutput output = reportOutputService.getById(id);
+        if (output == null) {
+            throw new BusinessException(404, "Report not found");
+        }
+
+        try {
+            InputStreamResource resource = minioService.downloadFile(output.getFileKey());
+            String contentType = getContentType(output.getFormat());
+            String fileName = output.getFileName() != null ? output.getFileName() : "report";
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(resource);
+        } catch (Exception e) {
+            throw new BusinessException(500, "Failed to download report: " + e.getMessage());
+        }
+    }
+
+    private String getContentType(com.enterprise.report.enums.ReportFormat format) {
+        if (format == null) return "application/octet-stream";
+        return switch (format) {
+            case WORD -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case PPT -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case PDF -> "application/pdf";
+        };
     }
 }

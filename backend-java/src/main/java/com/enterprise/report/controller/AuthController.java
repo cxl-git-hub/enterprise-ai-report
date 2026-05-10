@@ -2,10 +2,21 @@ package com.enterprise.report.controller;
 
 import com.enterprise.report.dto.ApiResponse;
 import com.enterprise.report.dto.auth.*;
+import com.enterprise.report.entity.SysUser;
 import com.enterprise.report.security.JwtTokenProvider;
 import com.enterprise.report.service.AuthService;
+import com.enterprise.report.service.UserService;
+import com.enterprise.report.mapper.KpiDefinitionMapper;
+import com.enterprise.report.mapper.WorkflowDefinitionMapper;
+import com.enterprise.report.mapper.ReportOutputMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.enterprise.report.entity.KpiDefinition;
+import com.enterprise.report.entity.WorkflowDefinition;
+import com.enterprise.report.entity.ReportOutput;
+import com.enterprise.report.security.TenantContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -17,7 +28,12 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
     private final JwtTokenProvider tokenProvider;
+    private final PasswordEncoder passwordEncoder;
+    private final KpiDefinitionMapper kpiDefinitionMapper;
+    private final WorkflowDefinitionMapper workflowDefinitionMapper;
+    private final ReportOutputMapper reportOutputMapper;
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -29,9 +45,6 @@ public class AuthController {
         return ApiResponse.success(authService.register(request));
     }
 
-    /**
-     * 前端发送 { refreshToken: string } 在body中
-     */
     @PostMapping("/refresh")
     public ApiResponse<LoginResponse> refresh(@RequestBody Map<String, String> body) {
         String refreshToken = body.get("refreshToken");
@@ -41,9 +54,6 @@ public class AuthController {
         return ApiResponse.success(authService.refreshToken(refreshToken));
     }
 
-    /**
-     * 获取当前用户信息
-     */
     @GetMapping("/me")
     public ApiResponse<UserInfoResponse> getCurrentUser(@RequestHeader("Authorization") String authorization) {
         String token = authorization.replace("Bearer ", "");
@@ -54,30 +64,77 @@ public class AuthController {
     @PutMapping("/profile")
     public ApiResponse<Void> updateProfile(@RequestBody Map<String, Object> profile,
                                            @RequestHeader("Authorization") String authorization) {
-        // In production, update user profile
+        String token = authorization.replace("Bearer ", "");
+        Long userId = tokenProvider.getUserIdFromToken(token);
+        SysUser user = userService.getById(userId);
+        if (user == null) {
+            return ApiResponse.error(404, "User not found");
+        }
+        if (profile.containsKey("displayName")) {
+            user.setRealName((String) profile.get("displayName"));
+        }
+        if (profile.containsKey("email")) {
+            user.setEmail((String) profile.get("email"));
+        }
+        if (profile.containsKey("phone")) {
+            user.setPhone((String) profile.get("phone"));
+        }
+        userService.updateById(user);
         return ApiResponse.success();
     }
 
     @PutMapping("/password")
     public ApiResponse<Void> changePassword(@RequestBody Map<String, String> passwordData,
                                             @RequestHeader("Authorization") String authorization) {
-        // In production, verify old password and update
+        String token = authorization.replace("Bearer ", "");
+        Long userId = tokenProvider.getUserIdFromToken(token);
+        SysUser user = userService.getById(userId);
+        if (user == null) {
+            return ApiResponse.error(404, "User not found");
+        }
+        String oldPassword = passwordData.get("oldPassword");
+        String newPassword = passwordData.get("newPassword");
+        if (oldPassword == null || newPassword == null) {
+            return ApiResponse.error(400, "Old and new passwords are required");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return ApiResponse.error(400, "Old password is incorrect");
+        }
+        if (newPassword.length() < 6) {
+            return ApiResponse.error(400, "New password must be at least 6 characters");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userService.updateById(user);
         return ApiResponse.success();
     }
 
     @PutMapping("/notification-preferences")
     public ApiResponse<Void> saveNotificationPreferences(@RequestBody Map<String, Object> prefs,
                                                          @RequestHeader("Authorization") String authorization) {
-        // In production, save user notification preferences
+        // Store preferences in user metadata or separate table
+        // For now, acknowledge the save
         return ApiResponse.success();
     }
 
     @GetMapping("/my-stats")
     public ApiResponse<Map<String, Object>> getMyStats(@RequestHeader("Authorization") String authorization) {
+        String token = authorization.replace("Bearer ", "");
+        Long userId = tokenProvider.getUserIdFromToken(token);
+        Long tenantId = TenantContext.getTenantId();
+
         Map<String, Object> stats = new HashMap<>();
-        stats.put("kpiCount", 0);
-        stats.put("workflowCount", 0);
-        stats.put("reportCount", 0);
+        stats.put("kpiCount", kpiDefinitionMapper.selectCount(
+                new LambdaQueryWrapper<KpiDefinition>()
+                        .eq(KpiDefinition::getTenantId, tenantId)
+                        .eq(KpiDefinition::getCreatedBy, userId)));
+        stats.put("workflowCount", workflowDefinitionMapper.selectCount(
+                new LambdaQueryWrapper<WorkflowDefinition>()
+                        .eq(WorkflowDefinition::getTenantId, tenantId)
+                        .eq(WorkflowDefinition::getCreatedBy, userId)));
+        stats.put("reportCount", reportOutputMapper.selectCount(
+                new LambdaQueryWrapper<ReportOutput>()
+                        .eq(ReportOutput::getTenantId, tenantId)
+                        .eq(ReportOutput::getCreatedBy, userId)));
         return ApiResponse.success(stats);
     }
 }

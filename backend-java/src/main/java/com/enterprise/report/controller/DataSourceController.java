@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/datasources")
 @RequiredArgsConstructor
@@ -77,8 +79,8 @@ public class DataSourceController {
     }
 
     @PostMapping("/{id}/test")
-    public ApiResponse<Boolean> testConnection(@PathVariable Long id) {
-        return ApiResponse.success(dataSourceService.testConnection(id));
+    public ApiResponse<Map<String, Object>> testConnection(@PathVariable Long id) {
+        return ApiResponse.success(dataSourceService.testConnectionWithDetails(id));
     }
 
     @PostMapping("/upload")
@@ -100,7 +102,7 @@ public class DataSourceController {
         String objectName = "uploads/" + TenantContext.getTenantId() + "/" + System.currentTimeMillis() + "_" + originalFilename;
         String filePath;
         try {
-            filePath = minioService.uploadFile(objectName, file.getInputStream(), file.getSize(), file.getContentType());
+            filePath = minioService.uploadFile(objectName, file.getInputStream(), file.getContentType());
         } catch (Exception e) {
             throw new BusinessException(500, "文件上传失败: " + e.getMessage());
         }
