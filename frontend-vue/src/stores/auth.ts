@@ -56,10 +56,15 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchCurrentUser() {
     try {
       const res = await authApi.getCurrentUser()
-      user.value = res.data
+      // Map realName to displayName for frontend compatibility
+      const userData = res.data
+      if (userData.realName && !userData.displayName) {
+        userData.displayName = userData.realName
+      }
+      user.value = userData
       // Persist permissions and roles for route guards
-      localStorage.setItem('permissions', JSON.stringify(res.data.permissions || []))
-      localStorage.setItem('roles', JSON.stringify(res.data.roles || []))
+      localStorage.setItem('permissions', JSON.stringify(userData.permissions || []))
+      localStorage.setItem('roles', JSON.stringify(userData.roles || []))
     } catch {
       clearAuth()
     }

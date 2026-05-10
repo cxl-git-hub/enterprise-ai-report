@@ -36,5 +36,7 @@ export const datasetApi = {
   update: (id: string, data: DatasetForm) => put<{ data: Dataset }>(`/datasets/${id}`, data),
   remove: (id: string) => del(`/datasets/${id}`),
   getColumns: (id: string) => get<{ data: Column[] }>(`/datasets/${id}/columns`),
-  refreshColumns: (id: string) => post<{ data: Column[] }>(`/datasets/${id}/columns/refresh`),
+  refreshColumns: (id: string) => post<{ data: Column[] }>(`/datasets/${id}/sync-columns`),
+  preview: (id: string, limit?: number) =>
+    get<{ data: { columns: string[]; rows: Record<string, unknown>[] } }>(`/datasets/${id}/preview`, { limit: limit || 100 }),
 }

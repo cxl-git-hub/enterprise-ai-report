@@ -43,8 +43,8 @@
           </template>
           <template v-if="column.key === 'status'">
             <a-badge
-              :status="record.lastTestStatus === 'success' ? 'success' : record.lastTestStatus === 'failed' ? 'error' : 'default'"
-              :text="record.lastTestStatus === 'success' ? '连接正常' : record.lastTestStatus === 'failed' ? '连接失败' : '未测试'"
+              :status="record.lastTestResult === 'success' || record.lastTestStatus === 'success' ? 'success' : record.lastTestResult === 'failed' || record.lastTestStatus === 'failed' ? 'error' : 'default'"
+              :text="record.lastTestResult === 'success' || record.lastTestStatus === 'success' ? '连接正常' : record.lastTestResult === 'failed' || record.lastTestStatus === 'failed' ? '连接失败' : '未测试'"
             />
           </template>
           <template v-if="column.key === 'action'">
@@ -218,7 +218,7 @@ const columns = [
   { title: '类型', dataIndex: 'type', key: 'type', width: 120 },
   { title: '主机', dataIndex: 'host', key: 'host' },
   { title: '端口', dataIndex: 'port', key: 'port', width: 80 },
-  { title: '数据库', dataIndex: 'database', key: 'database' },
+  { title: '数据库', dataIndex: 'databaseName', key: 'databaseName' },
   { title: '密码', dataIndex: 'password', key: 'password', width: 100 },
   { title: '连接状态', dataIndex: 'status', key: 'status', width: 120 },
   { title: '最后测试', dataIndex: 'lastTestAt', key: 'lastTestAt', width: 180 },
@@ -234,7 +234,16 @@ function openCreateModal() {
 async function openEditModal(record: DataSource) {
   openModal(record.id)
   const res = await datasourceApi.detail(record.id)
-  Object.assign(formState, res.data)
+  const data = res.data
+  Object.assign(formState, {
+    name: data.name,
+    type: data.type,
+    host: data.host,
+    port: data.port,
+    database: data.databaseName || data.database,
+    username: data.username,
+    password: '', // Don't populate password for security
+  })
 }
 
 async function handleSubmit() {

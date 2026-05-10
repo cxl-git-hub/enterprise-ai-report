@@ -82,7 +82,7 @@ export const workflowApi = {
   update: (id: string, data: WorkflowForm) => put<{ data: Workflow }>(`/workflows/${id}`, data),
   remove: (id: string) => del(`/workflows/${id}`),
   trigger: (id: string, params?: Record<string, unknown>) =>
-    post<{ data: WorkflowRun }>(`/workflows/${id}/trigger`, params),
+    post<{ data: WorkflowRun }>('/workflows/trigger', { workflowId: id, inputParams: params }),
   listRuns: (params: { page: number; pageSize: number; workflowId?: string; status?: string }) =>
     get<{ data: { items: WorkflowRun[]; total: number } }>('/workflow-runs', params),
   getRunDetail: (runId: string) => get<{ data: WorkflowRunDetail }>(`/workflow-runs/${runId}`),

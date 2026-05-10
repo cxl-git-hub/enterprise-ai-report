@@ -22,7 +22,8 @@ export interface UserInfo {
   id: string
   username: string
   email: string
-  displayName: string
+  displayName: string  // mapped from realName
+  realName: string
   tenantId: string
   tenantName: string
   roles: string[]

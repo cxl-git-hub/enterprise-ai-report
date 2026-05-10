@@ -37,8 +37,8 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
             <a-badge
-              :status="record.status === 'active' ? 'success' : 'default'"
-              :text="record.status === 'active' ? '启用' : '禁用'"
+              :status="record.status === 1 || record.status === 'active' ? 'success' : 'default'"
+              :text="record.status === 1 || record.status === 'active' ? '启用' : '禁用'"
             />
           </template>
           <template v-if="column.key === 'action'">
@@ -140,8 +140,8 @@ const formRules = {
 }
 
 const columns = [
-  { title: '租户名称', dataIndex: 'name', key: 'name' },
-  { title: '编码', dataIndex: 'code', key: 'code' },
+  { title: '租户名称', dataIndex: 'tenantName', key: 'tenantName' },
+  { title: '编码', dataIndex: 'tenantCode', key: 'tenantCode' },
   { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
   { title: '最大用户数', dataIndex: 'maxUsers', key: 'maxUsers', width: 120 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
@@ -153,7 +153,14 @@ async function openEditModal(id?: string) {
   openModal(id)
   if (id) {
     const res = await tenantApi.detail(id)
-    Object.assign(formState, res.data)
+    const data = res.data
+    Object.assign(formState, {
+      name: data.tenantName || data.name,
+      code: data.tenantCode || data.code,
+      description: data.description,
+      maxUsers: data.maxUsers,
+      status: data.status === 1 || data.status === 'active' ? 'active' : 'disabled',
+    })
   } else {
     Object.assign(formState, { name: '', code: '', description: '', maxUsers: 100, status: 'active' })
   }

@@ -6,11 +6,13 @@ export interface DataSource {
   type: string
   host: string
   port: number
-  database: string
+  database: string      // mapped from databaseName
+  databaseName: string  // raw backend field
   username: string
-  status: string
+  status: string | number
   lastTestAt: string
-  lastTestStatus: string
+  lastTestStatus: string // mapped from lastTestResult
+  lastTestResult: string // raw backend field
   createdAt: string
   updatedAt: string
 }
@@ -30,8 +32,32 @@ export const datasourceApi = {
   list: (params: { page: number; pageSize: number; keyword?: string }) =>
     get<{ data: { items: DataSource[]; total: number } }>('/datasources', params),
   detail: (id: string) => get<{ data: DataSource }>(`/datasources/${id}`),
-  create: (data: DataSourceForm) => post<{ data: DataSource }>('/datasources', data),
-  update: (id: string, data: DataSourceForm) => put<{ data: DataSource }>(`/datasources/${id}`, data),
+  create: (data: DataSourceForm) => {
+    const payload = {
+      name: data.name,
+      type: data.type,
+      host: data.host,
+      port: data.port,
+      databaseName: data.database,
+      username: data.username,
+      encryptedPassword: data.password,
+    }
+    return post<{ data: DataSource }>('/datasources', payload)
+  },
+  update: (id: string, data: DataSourceForm) => {
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      type: data.type,
+      host: data.host,
+      port: data.port,
+      databaseName: data.database,
+      username: data.username,
+    }
+    if (data.password) {
+      payload.encryptedPassword = data.password
+    }
+    return put<{ data: DataSource }>(`/datasources/${id}`, payload)
+  },
   remove: (id: string) => del(`/datasources/${id}`),
   testConnection: (id: string) => post<{ data: { success: boolean; message: string } }>(`/datasources/${id}/test`),
 }

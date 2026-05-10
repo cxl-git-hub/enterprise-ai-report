@@ -21,7 +21,7 @@
               :loading="tenantsLoading"
             >
               <a-select-option v-for="t in tenants" :key="t.id" :value="t.id">
-                {{ t.name }}
+                {{ getTenantDisplayName(t) }}
               </a-select-option>
             </a-select>
           </a-form-item>
@@ -81,6 +81,8 @@ interface Tenant {
   id: string
   name: string
   code: string
+  tenantName: string
+  tenantCode: string
 }
 
 const tenants = ref<Tenant[]>([])
@@ -100,6 +102,10 @@ const rules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码至少6位', trigger: 'blur' },
   ],
+}
+
+function getTenantDisplayName(t: Tenant): string {
+  return t.tenantName || t.name || t.tenantCode || t.code || '未知租户'
 }
 
 async function loadTenants() {

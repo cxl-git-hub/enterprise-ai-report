@@ -85,6 +85,17 @@ import { get, put, del } from '@/api/request'
 
 const router = useRouter()
 
+interface Notification {
+  id: string
+  type: 'success' | 'error' | 'warning' | 'info'
+  title: string
+  message: string
+  link?: string
+  read: boolean    // mapped from isRead
+  isRead: number   // raw backend field (0/1)
+  createdAt: string
+}
+
 const typeColor: Record<string, string> = {
   success: 'green',
   error: 'red',
@@ -100,13 +111,27 @@ const typeLabel: Record<string, string> = {
 }
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, resetSearch } =
-  useTable<any>({
+  useTable<Notification>({
     fetchApi: (params) => {
       // Clean up params for notification API
       const cleanParams: Record<string, unknown> = { limit: params.pageSize || 20 }
       if (params.type) cleanParams.type = params.type
       if (params.read !== undefined && params.read !== null && params.read !== '') cleanParams.read = params.read
-      return get('/notifications', cleanParams)
+      return get('/notifications', cleanParams).then((res: any) => {
+        // Map isRead to read for frontend compatibility
+        if (res?.data && Array.isArray(res.data)) {
+          res.data = res.data.map((n: any) => ({
+            ...n,
+            read: n.isRead === 1 || n.read === true,
+            message: n.message || n.title || '',
+          }))
+          // Wrap in expected format if needed
+          if (!res.data.items) {
+            res.data = { items: res.data, total: res.data.length }
+          }
+        }
+        return res
+      })
     },
   })
 
