@@ -1,12 +1,12 @@
 """Token and cost tracking service."""
 
 from typing import Optional
-from uuid import UUID
 
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.ai_trace import AITrace
+from app.models.ai_trace import AiExecutionTrace
 
 
 class CostTracker:
@@ -34,7 +34,6 @@ class CostTracker:
         model_name: str,
     ) -> float:
         """Calculate cost with model-specific pricing."""
-        # Model-specific pricing overrides
         model_pricing = {
             "gpt-4o": (0.005, 0.015),
             "gpt-4o-mini": (0.00015, 0.0006),
@@ -43,6 +42,9 @@ class CostTracker:
             "claude-3-opus": (0.015, 0.075),
             "claude-3-sonnet": (0.003, 0.015),
             "claude-3-haiku": (0.00025, 0.00125),
+            "deepseek-chat": (0.00014, 0.00028),
+            "glm-4": (0.001, 0.001),
+            "qwen-max": (0.004, 0.012),
         }
 
         prompt_price, completion_price = model_pricing.get(
@@ -55,37 +57,33 @@ class CostTracker:
 
     async def record_usage(
         self,
-        trace_id: UUID,
+        trace_id: int,
         prompt_tokens: int,
         completion_tokens: int,
         model_name: Optional[str] = None,
     ) -> float:
         """Record token usage and return calculated cost."""
-        total_tokens = prompt_tokens + completion_tokens
         cost = self.calculate_cost_for_model(
             prompt_tokens, completion_tokens, model_name or settings.LLM_MODEL
         )
-
         return cost
 
     async def get_usage_summary(
         self,
-        tenant_id: UUID,
+        tenant_id: int,
         trace_type: Optional[str] = None,
     ) -> dict:
         """Get aggregated usage summary for a tenant."""
-        from sqlalchemy import select, func
-
         query = select(
-            func.sum(AITrace.total_tokens).label("total_tokens"),
-            func.sum(AITrace.prompt_tokens).label("prompt_tokens"),
-            func.sum(AITrace.completion_tokens).label("completion_tokens"),
-            func.sum(AITrace.cost_usd).label("total_cost"),
-            func.count(AITrace.id).label("total_calls"),
-        ).where(AITrace.tenant_id == tenant_id)
+            func.sum(AiExecutionTrace.total_tokens).label("total_tokens"),
+            func.sum(AiExecutionTrace.prompt_tokens).label("prompt_tokens"),
+            func.sum(AiExecutionTrace.completion_tokens).label("completion_tokens"),
+            func.sum(AiExecutionTrace.cost).label("total_cost"),
+            func.count(AiExecutionTrace.id).label("total_calls"),
+        ).where(AiExecutionTrace.tenant_id == tenant_id)
 
         if trace_type:
-            query = query.where(AITrace.trace_type == trace_type)
+            query = query.where(AiExecutionTrace.ai_task_type == trace_type)
 
         result = await self.db.execute(query)
         row = result.one()

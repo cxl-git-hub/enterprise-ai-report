@@ -1,7 +1,6 @@
 """Execution traces endpoints."""
 
 from typing import Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,7 +45,7 @@ async def list_traces(
 
 @router.get("/traces/{trace_id}", response_model=ApiResponse[TraceResponse])
 async def get_trace(
-    trace_id: UUID,
+    trace_id: int,
     tenant: dict = Depends(get_tenant),
     db: AsyncSession = Depends(get_db),
 ):

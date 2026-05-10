@@ -1,17 +1,14 @@
-"""AI Trace model for tracking LLM execution traces."""
+"""AiExecutionTrace model - aligned with database schema."""
 
-from sqlalchemy import String, Text, Integer, BigInteger, Numeric
+from sqlalchemy import String, Integer, BigInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 
-class AITrace(BaseModel):
-    """Execution trace for an AI operation."""
-
+class AiExecutionTrace(BaseModel):
     __tablename__ = "ai_execution_trace"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     trace_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     run_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
@@ -25,9 +22,8 @@ class AITrace(BaseModel):
     model_config: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
     raw_output: Mapped[str] = mapped_column(Text, nullable=True)
     validated_output: Mapped[str] = mapped_column(Text, nullable=True)
-    validation_passed: Mapped[int] = mapped_column(Integer, nullable=True)
     validation_errors: Mapped[str] = mapped_column(Text, nullable=True)  # JSON
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
     latency_ms: Mapped[int] = mapped_column(BigInteger, nullable=True)
-    cost: Mapped[float] = mapped_column(Numeric(10, 6), default=0)
-    status: Mapped[str] = mapped_column(String(16), default="pending")
+    cost: Mapped[float] = mapped_column(default=0)
+    status: Mapped[str] = mapped_column(String(16), nullable=True)

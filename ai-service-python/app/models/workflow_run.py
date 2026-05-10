@@ -1,17 +1,14 @@
-"""WorkflowRun model for tracking workflow executions."""
+"""WorkflowRun model - aligned with database schema."""
 
-from sqlalchemy import String, Text, Integer, BigInteger, Numeric
+from sqlalchemy import String, Integer, BigInteger, Text, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 
 class WorkflowRun(BaseModel):
-    """A single execution of a workflow."""
-
     __tablename__ = "workflow_run"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     workflow_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     workflow_version: Mapped[int] = mapped_column(Integer, nullable=False)

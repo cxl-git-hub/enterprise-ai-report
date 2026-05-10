@@ -42,25 +42,32 @@ class AuthService:
 
         expire = datetime.now(timezone.utc) + expires_delta
         payload = {
-            "sub": str(user_id),
-            "user_id": str(user_id),
-            "tenant_id": str(tenant_id),
+            "sub": username,
+            "userId": user_id,
+            "tenantId": tenant_id,
             "username": username,
-            "role": role,
+            "type": "access",
             "exp": expire,
             "iat": datetime.now(timezone.utc),
         }
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     async def validate_token(self, token: str) -> Optional[dict]:
-        """Validate a JWT token and return the user info."""
+        """Validate a JWT token and return the user info.
+
+        Supports both Java backend format (userId/tenantId) and legacy format (user_id/tenant_id).
+        """
         try:
             payload = jwt.decode(
                 token,
                 settings.JWT_SECRET_KEY,
                 algorithms=[settings.JWT_ALGORITHM],
             )
-            user_id = payload.get("user_id")
+
+            # Support Java backend JWT format: userId (Long), tenantId (Long)
+            user_id = payload.get("userId") or payload.get("user_id")
+            tenant_id = payload.get("tenantId") or payload.get("tenant_id")
+
             if not user_id:
                 return None
 
@@ -73,12 +80,12 @@ class AuthService:
 
             return {
                 "id": user.id,
-                "tenant_id": user.tenant_id,
+                "tenant_id": user.tenant_id or int(tenant_id) if tenant_id else None,
                 "username": user.username,
                 "email": user.email,
                 "real_name": user.real_name,
             }
-        except JWTError:
+        except (JWTError, ValueError, TypeError):
             return None
 
     async def authenticate_user(self, username: str, password: str) -> Optional[User]:
