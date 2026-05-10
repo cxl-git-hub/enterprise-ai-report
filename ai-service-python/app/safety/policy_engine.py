@@ -1,7 +1,6 @@
 """AI policy enforcement engine."""
 
 from typing import Any, Dict, List, Optional, Set, Tuple
-from uuid import UUID
 
 
 class PolicyViolation:
