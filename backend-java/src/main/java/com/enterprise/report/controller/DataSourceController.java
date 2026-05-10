@@ -74,6 +74,11 @@ public class DataSourceController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
+        DataSource ds = dataSourceService.getById(id);
+        if (ds == null || !ds.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "DataSource not found");
+        }
         dataSourceService.removeById(id);
         return ApiResponse.success();
     }

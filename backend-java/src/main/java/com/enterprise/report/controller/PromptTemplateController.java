@@ -55,6 +55,11 @@ public class PromptTemplateController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
+        PromptTemplate template = promptTemplateService.getById(id);
+        if (template == null || !template.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Prompt template not found");
+        }
         promptTemplateService.removeById(id);
         return ApiResponse.success();
     }

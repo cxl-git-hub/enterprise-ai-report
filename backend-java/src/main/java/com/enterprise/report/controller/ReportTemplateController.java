@@ -58,6 +58,11 @@ public class ReportTemplateController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
+        ReportTemplate template = reportTemplateService.getById(id);
+        if (template == null || !template.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Report template not found");
+        }
         reportTemplateService.removeById(id);
         return ApiResponse.success();
     }

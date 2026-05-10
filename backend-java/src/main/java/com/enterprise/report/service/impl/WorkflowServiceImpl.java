@@ -37,8 +37,14 @@ public class WorkflowServiceImpl extends ServiceImpl<WorkflowDefinitionMapper, W
         if (existing == null) {
             throw new BusinessException(404, "Workflow not found");
         }
+        // Tenant isolation check
+        Long tenantId = com.enterprise.report.security.TenantContext.getTenantId();
+        if (!existing.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Workflow not found");
+        }
         dependencyValidator.validateWorkflowDependencies(workflow);
         workflow.setId(id);
+        workflow.setTenantId(tenantId);
         workflow.setVersion(existing.getVersion() + 1);
         updateById(workflow);
         return workflow;

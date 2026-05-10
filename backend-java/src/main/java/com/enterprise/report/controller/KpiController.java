@@ -80,6 +80,11 @@ public class KpiController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
+        KpiDefinition kpi = kpiService.getById(id);
+        if (kpi == null || !kpi.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "KPI not found");
+        }
         kpiService.removeById(id);
         return ApiResponse.success();
     }

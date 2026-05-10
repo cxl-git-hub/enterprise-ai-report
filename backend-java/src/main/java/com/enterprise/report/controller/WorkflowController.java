@@ -73,6 +73,11 @@ public class WorkflowController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
+        WorkflowDefinition workflow = workflowService.getById(id);
+        if (workflow == null || !workflow.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Workflow not found");
+        }
         workflowService.removeById(id);
         return ApiResponse.success();
     }

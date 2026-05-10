@@ -74,6 +74,11 @@ public class SchemaController {
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
+        SchemaDefinition schema = schemaService.getById(id);
+        if (schema == null || !schema.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Schema not found");
+        }
         schemaService.removeById(id);
         return ApiResponse.success();
     }
