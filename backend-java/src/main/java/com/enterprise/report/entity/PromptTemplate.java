@@ -17,7 +17,7 @@ public class PromptTemplate {
     private String variables;
     private String config;
     private Integer version;
-    private Integer status;
+    private String status;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)

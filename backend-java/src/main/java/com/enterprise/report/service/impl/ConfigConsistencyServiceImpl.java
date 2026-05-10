@@ -322,8 +322,52 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
         }
 
         SnapshotDiff diff = new SnapshotDiff();
-        diff.setChanges(new ArrayList<>());
-        // Simple diff - in production, use a proper JSON diff library
+        List<SnapshotDiff.Change> changes = new ArrayList<>();
+
+        try {
+            Map<String, List<?>> data1 = objectMapper.readValue(snap1.getFullSnapshot(),
+                    new TypeReference<Map<String, List<?>>() {});
+            Map<String, List<?>> data2 = objectMapper.readValue(snap2.getFullSnapshot(),
+                    new TypeReference<Map<String, List<?>>() {});
+
+            // Compare each config type
+            for (String key : List.of("schemas", "kpis", "workflows", "prompts", "reports")) {
+                List<?> list1 = data1.getOrDefault(key, List.of());
+                List<?> list2 = data2.getOrDefault(key, List.of());
+
+                int maxSize = Math.max(list1.size(), list2.size());
+                for (int i = 0; i < maxSize; i++) {
+                    if (i >= list1.size()) {
+                        SnapshotDiff.Change change = new SnapshotDiff.Change();
+                        change.setType("added");
+                        change.setPath(key + "[" + i + "]");
+                        change.setNewValue(list2.get(i));
+                        changes.add(change);
+                    } else if (i >= list2.size()) {
+                        SnapshotDiff.Change change = new SnapshotDiff.Change();
+                        change.setType("removed");
+                        change.setPath(key + "[" + i + "]");
+                        change.setOldValue(list1.get(i));
+                        changes.add(change);
+                    } else {
+                        String json1 = objectMapper.writeValueAsString(list1.get(i));
+                        String json2 = objectMapper.writeValueAsString(list2.get(i));
+                        if (!json1.equals(json2)) {
+                            SnapshotDiff.Change change = new SnapshotDiff.Change();
+                            change.setType("modified");
+                            change.setPath(key + "[" + i + "]");
+                            change.setOldValue(list1.get(i));
+                            change.setNewValue(list2.get(i));
+                            changes.add(change);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to diff snapshots: {}", e.getMessage());
+        }
+
+        diff.setChanges(changes);
         return diff;
     }
 

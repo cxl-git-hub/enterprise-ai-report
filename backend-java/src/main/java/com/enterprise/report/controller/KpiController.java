@@ -61,7 +61,7 @@ public class KpiController {
         kpi.setGroupBy(request.getGroupBy());
         kpi.setConfig(request.getConfig());
         kpi.setVersion(1);
-        kpi.setStatus(1);
+        kpi.setStatus("active");
         kpiService.save(kpi);
         return ApiResponse.success(kpi);
     }

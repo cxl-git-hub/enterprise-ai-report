@@ -36,9 +36,12 @@ export interface KpiVersion {
 
 export interface KpiExecuteResult {
   value: number
-  unit: string
-  executedAt: string
-  duration: number
+  unit?: string
+  executedAt?: string
+  duration?: number
+  kpiCode?: string
+  dimensions?: Record<string, unknown[]>
+  calculatedAt?: string
 }
 
 export const kpiApi = {

@@ -73,6 +73,18 @@
       </a-descriptions>
     </a-modal>
 
+    <!-- Execute Params Modal -->
+    <a-modal v-model:open="executeParamsVisible" title="执行KPI" :confirm-loading="executingId !== null" @ok="handleExecuteWithParams" width="500px">
+      <a-form layout="vertical">
+        <a-form-item label="日期范围">
+          <a-range-picker v-model:value="executeDateRange" style="width: 100%" />
+        </a-form-item>
+        <a-form-item label="分组维度">
+          <a-input v-model:value="executeGroupBy" placeholder="如：status, category（逗号分隔）" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
     <!-- Form Modal -->
     <a-modal
       v-model:open="modalVisible"
@@ -187,6 +199,10 @@ const formRef = ref<FormInstance>()
 const executingId = ref<string | null>(null)
 const executeResultVisible = ref(false)
 const executeResult = ref<KpiExecuteResult | null>(null)
+const executeParamsVisible = ref(false)
+const executeDateRange = ref<any>(null)
+const executeGroupBy = ref('')
+const pendingExecuteKpi = ref<Kpi | null>(null)
 const versionModalVisible = ref(false)
 const versionHistory = ref<KpiVersion[]>([])
 const currentKpi = ref<Kpi | null>(null)
@@ -252,13 +268,31 @@ async function openVersionHistory(record: Kpi) {
 }
 
 async function handleExecute(record: Kpi) {
-  executingId.value = record.id
+  pendingExecuteKpi.value = record
+  executeDateRange.value = null
+  executeGroupBy.value = ''
+  executeParamsVisible.value = true
+}
+
+async function handleExecuteWithParams() {
+  if (!pendingExecuteKpi.value) return
+  executingId.value = pendingExecuteKpi.value.id
+  executeParamsVisible.value = false
   try {
-    const res = await kpiApi.execute(record.id)
+    const params: Record<string, unknown> = {}
+    if (executeDateRange.value && executeDateRange.value.length === 2) {
+      params.periodStart = executeDateRange.value[0].format('YYYY-MM-DD')
+      params.periodEnd = executeDateRange.value[1].format('YYYY-MM-DD')
+    }
+    if (executeGroupBy.value) {
+      params.groupBy = executeGroupBy.value.split(',').map((s: string) => s.trim())
+    }
+    const res = await kpiApi.execute(pendingExecuteKpi.value.id, params)
     executeResult.value = res.data
     executeResultVisible.value = true
   } finally {
     executingId.value = null
+    pendingExecuteKpi.value = null
   }
 }
 

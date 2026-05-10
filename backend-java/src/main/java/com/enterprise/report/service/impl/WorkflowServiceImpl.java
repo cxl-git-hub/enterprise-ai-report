@@ -25,7 +25,7 @@ public class WorkflowServiceImpl extends ServiceImpl<WorkflowDefinitionMapper, W
         dependencyValidator.validateWorkflowDependencies(workflow);
         workflow.setVersion(1);
         workflow.setState(WorkflowState.PENDING);
-        workflow.setStatus(1);
+        workflow.setStatus("draft");
         save(workflow);
         return workflow;
     }

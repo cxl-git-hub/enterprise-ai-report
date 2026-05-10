@@ -44,7 +44,7 @@ public class ReportTemplateController {
     public ApiResponse<ReportTemplate> create(@RequestBody ReportTemplate template) {
         template.setTenantId(TenantContext.getTenantId());
         template.setVersion(1);
-        template.setStatus(1);
+        template.setStatus("active");
         reportTemplateService.save(template);
         return ApiResponse.success(template);
     }

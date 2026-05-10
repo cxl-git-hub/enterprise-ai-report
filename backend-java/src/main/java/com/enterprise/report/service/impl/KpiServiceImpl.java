@@ -27,7 +27,7 @@ public class KpiServiceImpl extends ServiceImpl<KpiDefinitionMapper, KpiDefiniti
         if (kpi == null) {
             throw new BusinessException(404, "KPI not found");
         }
-        if (kpi.getStatus() != 1) {
+        if (!"active".equals(kpi.getStatus())) {
             throw new BusinessException(400, "KPI is not active");
         }
 

@@ -2,10 +2,13 @@
 
 from typing import Any, Dict, List, Optional
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engines.nl2sql.graph import create_nl2sql_graph
 from app.engines.nl2sql.state import NL2SQLState
+from app.models.schema_definition import SchemaDefinition
+from app.models.dataset import Dataset
 from app.services.trace_service import TraceService
 from app.services.cost_tracker import CostTracker
 
@@ -17,6 +20,22 @@ class NL2SQLService:
         self.db = db
         self.trace_service = TraceService(db)
         self.cost_tracker = CostTracker(db)
+
+    async def _get_schema_context(self, dataset_ids: List[int]) -> str:
+        """Fetch schema column definitions for the given datasets to provide context to AI."""
+        if not dataset_ids:
+            return ""
+
+        context_parts = []
+        for ds_id in dataset_ids:
+            result = await self.db.execute(
+                select(SchemaDefinition).where(SchemaDefinition.dataset_id == ds_id)
+            )
+            schema = result.scalar_one_or_none()
+            if schema and schema.column_definitions:
+                context_parts.append(f"Table (dataset_id={ds_id}):\n{schema.column_definitions}")
+
+        return "\n\n".join(context_parts)
 
     async def execute(
         self,
@@ -36,6 +55,9 @@ class NL2SQLService:
         )
 
         try:
+            # Fetch schema context for AI
+            schema_context = await self._get_schema_context(dataset_ids or [])
+
             initial_state = NL2SQLState(
                 tenant_id=str(tenant_id),
                 user_id=str(user_id),
@@ -43,6 +65,7 @@ class NL2SQLService:
                 dataset_ids=[str(d) for d in dataset_ids] if dataset_ids else [],
                 max_rows=max_rows,
                 include_explanation=include_explanation,
+                schema_context=schema_context,
             )
 
             graph = create_nl2sql_graph(self.db)
@@ -107,8 +130,6 @@ class NL2SQLService:
             return {"success": False, "error": "SQL validation failed: " + "; ".join(result.errors)}
 
         try:
-            # In production, execute against the actual data source
-            # For now, return a placeholder
             return {
                 "success": True,
                 "columns": [],
