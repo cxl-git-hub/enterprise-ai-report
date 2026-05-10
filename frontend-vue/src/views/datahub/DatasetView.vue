@@ -32,8 +32,18 @@
         @expand="handleExpand"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'rowCount'">
+            <a-tag>{{ (record.rowCount || 0).toLocaleString() }} 行</a-tag>
+          </template>
+          <template v-if="column.key === 'status'">
+            <a-badge
+              :status="record.status === 'active' ? 'success' : 'default'"
+              :text="record.status === 'active' ? '已激活' : '草稿'"
+            />
+          </template>
           <template v-if="column.key === 'action'">
             <div class="table-actions">
+              <a-button type="link" size="small" @click="handlePreviewData(record)">预览</a-button>
               <a-button type="link" size="small" @click="handleRefreshColumns(record.id)">刷新列</a-button>
               <a-button type="link" size="small" @click="openEditModal(record)">编辑</a-button>
               <ConfirmDelete @confirm="handleDelete(record.id)">
@@ -98,6 +108,26 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- Data Preview Modal -->
+    <a-modal
+      v-model:open="previewVisible"
+      :title="`数据预览: ${previewDatasetName}`"
+      :footer="null"
+      width="900px"
+    >
+      <a-spin :spinning="previewLoading">
+        <a-table
+          v-if="previewData.columns.length > 0"
+          :columns="previewData.columns.map(c => ({ title: c, dataIndex: c, key: c, ellipsis: true }))"
+          :data-source="previewData.rows"
+          :pagination="{ pageSize: 20 }"
+          size="small"
+          :scroll="{ x: true }"
+        />
+        <a-empty v-else description="暂无数据" />
+      </a-spin>
+    </a-modal>
   </div>
 </template>
 
@@ -111,11 +141,16 @@ import { useTable } from '@/composables/useTable'
 import { useModal } from '@/composables/useModal'
 import { datasetApi, type Dataset, type DatasetForm } from '@/api/dataset'
 import { datasourceApi, type DataSource } from '@/api/datasource'
+import { get } from '@/api/request'
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
 const expandedRowKeys = ref<string[]>([])
 const datasourceOptions = ref<DataSource[]>([])
+const previewVisible = ref(false)
+const previewLoading = ref(false)
+const previewData = ref<{ columns: string[]; rows: Record<string, unknown>[] }>({ columns: [], rows: [] })
+const previewDatasetName = ref('')
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =
   useTable<Dataset>({
@@ -141,9 +176,10 @@ const columns = [
   { title: '名称', dataIndex: 'name', key: 'name' },
   { title: '数据源', dataIndex: 'datasourceName', key: 'datasourceName' },
   { title: '表名', dataIndex: 'tableName', key: 'tableName' },
+  { title: '数据量', dataIndex: 'rowCount', key: 'rowCount', width: 120 },
   { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '操作', key: 'action', width: 220, fixed: 'right' as const },
+  { title: '操作', key: 'action', width: 280, fixed: 'right' as const },
 ]
 
 const columnColumns = [
@@ -208,6 +244,20 @@ async function handleDelete(id: string) {
     message.success('删除成功')
     fetchData()
   } catch {}
+}
+
+async function handlePreviewData(record: Dataset) {
+  previewDatasetName.value = record.name
+  previewVisible.value = true
+  previewLoading.value = true
+  try {
+    const res = await get<{ data: { columns: string[]; rows: Record<string, unknown>[] } }>(`/datasets/${record.id}/preview`, { limit: 100 })
+    previewData.value = res?.data || { columns: [], rows: [] }
+  } catch {
+    previewData.value = { columns: [], rows: [] }
+  } finally {
+    previewLoading.value = false
+  }
 }
 
 onMounted(async () => {

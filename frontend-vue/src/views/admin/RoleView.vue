@@ -2,9 +2,14 @@
   <div class="page-container">
     <PageHeader title="角色管理" subtitle="管理系统角色和权限">
       <template #actions>
-        <a-button type="primary" @click="openCreateModal">
-          <PlusOutlined /> 新建角色
-        </a-button>
+        <a-space>
+          <a-button type="primary" @click="openCreateModal">
+            <PlusOutlined /> 新建角色
+          </a-button>
+          <a-button @click="fetchData">
+            <ReloadOutlined /> 刷新
+          </a-button>
+        </a-space>
       </template>
     </PageHeader>
 
@@ -86,7 +91,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { message } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmDelete from '@/components/common/ConfirmDelete.vue'
 import { useTable } from '@/composables/useTable'
