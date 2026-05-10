@@ -97,6 +97,7 @@ const kpiChartRef = ref<HTMLElement>()
 const statsLoading = ref(true)
 const runsLoading = ref(true)
 const chartLoading = ref(true)
+let chartInstance: echarts.ECharts | null = null
 
 const statItems = computed(() => [
   { icon: markRaw(DatabaseOutlined), value: stats.datasourceCount, label: '数据源', bg: '#e6f4ff', color: '#1677ff' },
@@ -201,8 +202,11 @@ async function loadKpiChart() {
 
 function initChart(data: Array<{ value: number; name: string; color: string }>) {
   if (!kpiChartRef.value) return
-  const chart = echarts.init(kpiChartRef.value)
-  chart.setOption({
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+  chartInstance = echarts.init(kpiChartRef.value)
+  chartInstance.setOption({
     tooltip: { trigger: 'item' },
     legend: { bottom: 0 },
     series: [

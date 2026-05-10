@@ -35,15 +35,14 @@ export function useTable<T extends Record<string, unknown>>(options: UseTableOpt
   async function fetchData() {
     loading.value = true
     try {
-      const params = {
+      const params: Record<string, unknown> = {
         page: pagination.current,
         pageSize: pagination.pageSize,
-        ...searchParams,
       }
-      // Remove empty values
-      Object.keys(params).forEach((key) => {
-        if (params[key] === '' || params[key] === undefined || params[key] === null) {
-          delete params[key]
+      // Merge search params, removing empty values
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (value !== '' && value !== undefined && value !== null && value !== 'undefined') {
+          params[key] = value
         }
       })
       const res = await fetchApi(params)

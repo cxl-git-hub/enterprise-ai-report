@@ -24,7 +24,7 @@
     <a-spin :spinning="loading">
       <a-row :gutter="16" v-if="runDetail">
         <!-- Summary Cards -->
-        <a-col :span="6">
+        <a-col :xs="12" :sm="12" :md="6">
           <div class="stat-card">
             <div class="stat-icon" :style="{ background: statusBg[runDetail.status], color: statusColor[runDetail.status] }">
               <CheckCircleOutlined v-if="runDetail.status === 'success'" />
@@ -36,7 +36,7 @@
             <div class="stat-label">运行状态</div>
           </div>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :sm="12" :md="6">
           <div class="stat-card">
             <div class="stat-icon" style="background: #e6f4ff; color: #1677ff">
               <FieldTimeOutlined />
@@ -45,7 +45,7 @@
             <div class="stat-label">总耗时</div>
           </div>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :sm="12" :md="6">
           <div class="stat-card">
             <div class="stat-icon" style="background: #f6ffed; color: #52c41a">
               <ThunderboltOutlined />
@@ -54,7 +54,7 @@
             <div class="stat-label">Token用量</div>
           </div>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :sm="12" :md="6">
           <div class="stat-card">
             <div class="stat-icon" style="background: #fff7e6; color: #fa8c16">
               <DollarOutlined />
@@ -67,7 +67,7 @@
 
       <a-row :gutter="16" style="margin-top: 16px" v-if="runDetail">
         <!-- Execution Timeline & DAG -->
-        <a-col :span="16">
+        <a-col :xs="24" :md="16">
           <!-- DAG Topology View -->
           <a-card title="DAG 拓扑图" :bordered="false" class="page-card">
             <div class="dag-visualization">
@@ -195,7 +195,7 @@
         </a-col>
 
         <!-- Node Detail Panel -->
-        <a-col :span="8">
+        <a-col :xs="24" :md="8">
           <a-card title="节点详情" :bordered="false" class="page-card" v-if="selectedNode">
             <a-descriptions :column="1" bordered size="small">
               <a-descriptions-item label="节点名称">{{ selectedNode.nodeName }}</a-descriptions-item>
@@ -300,12 +300,23 @@ const dagNodes = computed(() => runDetail.value?.nodeRuns || [])
 const dagSvgWidth = computed(() => Math.max(800, dagNodes.value.length * 160))
 
 const dagEdges = computed(() => {
-  // Build edges from node dependencies (inferred from execution order or node metadata)
+  // Try to build edges from node metadata if available, otherwise infer from execution order
   const nodes = runDetail.value?.nodeRuns || []
   const edges: DagEdgeData[] = []
+  
+  // Check if nodes have dependency info in their metadata
+  // For now, use sequential execution order as a fallback
+  // In production, the backend should provide the actual DAG edges
   for (let i = 1; i < nodes.length; i++) {
-    // Simple heuristic: connect sequential nodes; in production, use actual DAG definition
-    edges.push({ from: nodes[i - 1].nodeId, to: nodes[i].nodeId })
+    // Only create edge if nodes are in sequential order (not parallel)
+    if (nodes[i].startedAt && nodes[i-1].finishedAt) {
+      const prevEnd = new Date(nodes[i-1].finishedAt).getTime()
+      const currStart = new Date(nodes[i].startedAt).getTime()
+      // If current node started after previous ended, they have a dependency
+      if (currStart >= prevEnd) {
+        edges.push({ from: nodes[i - 1].nodeId, to: nodes[i].nodeId })
+      }
+    }
   }
   return edges
 })

@@ -122,6 +122,7 @@ async function loadTenants() {
 async function handleLogin() {
   try {
     await authStore.login(formState.username, formState.password)
+    // Set tenantId from selected tenant
     if (formState.tenantId) {
       localStorage.setItem('tenantId', String(formState.tenantId))
     }
@@ -133,8 +134,8 @@ async function handleLogin() {
     message.success('登录成功')
     const redirect = (route.query.redirect as string) || '/dashboard'
     router.push(redirect)
-  } catch {
-    // Error handled by interceptor
+  } catch (err: unknown) {
+    // Error already handled by request interceptor
   }
 }
 

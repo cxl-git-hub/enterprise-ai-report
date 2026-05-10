@@ -101,7 +101,13 @@ const typeLabel: Record<string, string> = {
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, resetSearch } =
   useTable<any>({
-    fetchApi: (params) => get('/notifications', params),
+    fetchApi: (params) => {
+      // Clean up params for notification API
+      const cleanParams: Record<string, unknown> = { limit: params.pageSize || 20 }
+      if (params.type) cleanParams.type = params.type
+      if (params.read !== undefined && params.read !== null && params.read !== '') cleanParams.read = params.read
+      return get('/notifications', cleanParams)
+    },
   })
 
 const unreadCount = computed(() => dataSource.value.filter((n: any) => !n.read).length)
