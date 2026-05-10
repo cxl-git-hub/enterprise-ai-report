@@ -6,6 +6,7 @@ import com.enterprise.report.dto.ApiResponse;
 import com.enterprise.report.dto.PageResult;
 import com.enterprise.report.entity.ReportOutput;
 import com.enterprise.report.exception.BusinessException;
+import com.enterprise.report.security.TenantContext;
 import com.enterprise.report.service.MinioService;
 import com.enterprise.report.service.ReportOutputService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,9 @@ public class ReportOutputController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) Long workflowRunId) {
+        Long tenantId = TenantContext.getTenantId();
         LambdaQueryWrapper<ReportOutput> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ReportOutput::getTenantId, tenantId);
         if (workflowRunId != null) {
             wrapper.eq(ReportOutput::getWorkflowRunId, workflowRunId);
         }
@@ -38,7 +41,12 @@ public class ReportOutputController {
 
     @GetMapping("/{id}")
     public ApiResponse<ReportOutput> get(@PathVariable Long id) {
-        return ApiResponse.success(reportOutputService.getById(id));
+        Long tenantId = TenantContext.getTenantId();
+        ReportOutput output = reportOutputService.getById(id);
+        if (output == null || !output.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Report not found");
+        }
+        return ApiResponse.success(output);
     }
 
     @GetMapping("/{id}/download")

@@ -7,6 +7,7 @@ import com.enterprise.report.dto.PageResult;
 import com.enterprise.report.entity.AiExecutionTrace;
 import com.enterprise.report.exception.BusinessException;
 import com.enterprise.report.mapper.AiExecutionTraceMapper;
+import com.enterprise.report.security.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +24,9 @@ public class AiTraceController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String aiTaskType,
             @RequestParam(required = false) String status) {
+        Long tenantId = TenantContext.getTenantId();
         LambdaQueryWrapper<AiExecutionTrace> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AiExecutionTrace::getTenantId, tenantId);
         if (aiTaskType != null && !aiTaskType.isEmpty()) {
             wrapper.eq(AiExecutionTrace::getAiTaskType, aiTaskType);
         }
@@ -38,8 +41,9 @@ public class AiTraceController {
 
     @GetMapping("/{id}")
     public ApiResponse<AiExecutionTrace> get(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
         AiExecutionTrace trace = traceMapper.selectById(id);
-        if (trace == null) {
+        if (trace == null || !trace.getTenantId().equals(tenantId)) {
             throw new BusinessException(404, "AI trace not found");
         }
         return ApiResponse.success(trace);

@@ -32,8 +32,8 @@ class NL2SQLService:
                 select(SchemaDefinition).where(SchemaDefinition.dataset_id == ds_id)
             )
             schema = result.scalar_one_or_none()
-            if schema and schema.column_definitions:
-                context_parts.append(f"Table (dataset_id={ds_id}):\n{schema.column_definitions}")
+            if schema and schema.columns:
+                context_parts.append(f"Table (dataset_id={ds_id}):\n{schema.columns}")
 
         return "\n\n".join(context_parts)
 

@@ -12,6 +12,7 @@ import com.enterprise.report.entity.WorkflowStateSnapshot;
 import com.enterprise.report.entity.WorkflowDefinition;
 import com.enterprise.report.enums.WorkflowState;
 import com.enterprise.report.mapper.WorkflowStateSnapshotMapper;
+import com.enterprise.report.security.TenantContext;
 import com.enterprise.report.service.WorkflowExecutionService;
 import com.enterprise.report.service.WorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,9 @@ public class WorkflowRunController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) Long workflowId,
             @RequestParam(required = false) String status) {
+        Long tenantId = TenantContext.getTenantId();
         LambdaQueryWrapper<WorkflowRun> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkflowRun::getTenantId, tenantId);
         if (workflowId != null) {
             wrapper.eq(WorkflowRun::getWorkflowId, workflowId);
         }
@@ -59,7 +62,11 @@ public class WorkflowRunController {
 
     @GetMapping("/{id}")
     public ApiResponse<WorkflowRunResponse> get(@PathVariable Long id) {
+        Long tenantId = TenantContext.getTenantId();
         WorkflowRun run = executionService.getRunDetail(id);
+        if (!run.getTenantId().equals(tenantId)) {
+            throw new BusinessException(404, "Workflow run not found");
+        }
         WorkflowRunResponse response = toRunResponse(run);
 
         // Load state snapshots

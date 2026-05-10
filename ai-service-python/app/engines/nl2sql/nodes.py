@@ -48,24 +48,36 @@ async def get_schema_context(state: NL2SQLState, db: AsyncSession) -> Dict[str, 
     schema_columns = {}
 
     for ds in datasets:
+        if not ds.table_name:
+            continue
         allowed_tables.append(ds.table_name.lower())
         schema_result = await db.execute(
-            select(SchemaDefinition).where(SchemaDefinition.dataset_id == ds.id)
+            select(SchemaDefinition).where(
+                SchemaDefinition.dataset_id == ds.id,
+                SchemaDefinition.tenant_id == int(tenant_id),
+            )
         )
-        columns = list(schema_result.scalars().all())
+        schema = schema_result.scalar_one_or_none()
 
         col_defs = []
         col_names = []
-        for col in columns:
-            nullable = "NULL" if col.is_nullable else "NOT NULL"
-            pk = " [PK]" if col.is_primary_key else ""
-            col_defs.append(f"  {col.column_name} {col.data_type} {nullable}{pk}")
-            col_names.append(col.column_name.lower())
+        if schema and schema.columns:
+            try:
+                columns = json.loads(schema.columns) if isinstance(schema.columns, str) else schema.columns
+                for col in columns:
+                    col_name = col.get("name", "")
+                    col_type = col.get("type", "VARCHAR")
+                    nullable = "NULL" if col.get("nullable", True) else "NOT NULL"
+                    pk = " [PK]" if col.get("isPrimaryKey") else ""
+                    col_defs.append(f"  {col_name} {col_type} {nullable}{pk}")
+                    col_names.append(col_name.lower())
+            except (json.JSONDecodeError, TypeError):
+                pass
 
         schema_columns[ds.table_name.lower()] = col_names
         schema_parts.append(
             f"Table: {ds.table_name}\n"
-            f"Description: {ds.description or ds.display_name or ds.name}\n"
+            f"Description: {ds.description or ds.name}\n"
             f"Columns:\n" + "\n".join(col_defs)
         )
 
