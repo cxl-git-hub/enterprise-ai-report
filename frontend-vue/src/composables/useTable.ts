@@ -16,7 +16,7 @@ interface UseTableOptions<T> {
   immediate?: boolean
 }
 
-export function useTable<T extends Record<string, unknown>>(options: UseTableOptions<T>) {
+export function useTable<T extends Record<string, any>>(options: UseTableOptions<T>) {
   const { fetchApi, defaultPageSize = 10, immediate = true } = options
 
   const loading = ref(false)

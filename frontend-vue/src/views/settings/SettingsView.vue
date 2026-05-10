@@ -30,10 +30,10 @@
             <a-form-item label="主题模式">
               <a-radio-group v-model:value="settings.theme" @change="handleThemeChange">
                 <a-radio-button value="light">
-                  <SunOutlined /> 浅色模式
+                  <CheckCircleOutlined /> 浅色模式
                 </a-radio-button>
                 <a-radio-button value="dark">
-                  <MoonOutlined /> 深色模式
+                  <CloseCircleOutlined /> 深色模式
                 </a-radio-button>
                 <a-radio-button value="auto">
                   <DesktopOutlined /> 跟随系统
@@ -253,7 +253,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import {
   SkinOutlined, ThunderboltOutlined, BellOutlined, SafetyOutlined, SettingOutlined,
-  SunOutlined, MoonOutlined, DesktopOutlined, DeleteOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, DesktopOutlined, DeleteOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useAppStore } from '@/stores/app'

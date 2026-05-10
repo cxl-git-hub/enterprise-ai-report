@@ -7,7 +7,10 @@ interface User {
   username: string
   email: string
   realName: string
+  displayName?: string
   tenantId: string
+  tenantName?: string
+  createdAt?: string
   roles: string[]
   permissions: string[]
 }

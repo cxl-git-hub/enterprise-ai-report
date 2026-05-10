@@ -327,7 +327,7 @@ async function loadSnapshots() {
 async function handleExportConfig() {
   try {
     const res = await configApi.exportConfig()
-    const blob = new Blob([res as BlobPart], { type: 'application/json' })
+    const blob = new Blob([res as unknown as BlobPart], { type: 'application/json' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

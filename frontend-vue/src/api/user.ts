@@ -5,6 +5,7 @@ export interface User {
   username: string
   email: string
   realName: string
+  displayName?: string
   phone: string
   tenantId: string
   status: number

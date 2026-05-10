@@ -108,7 +108,7 @@ async function handleDownload(record: ReportOutput) {
   downloadingId.value = record.id
   try {
     const res = await reportOutputApi.download(record.id)
-    const blob = new Blob([res as BlobPart])
+    const blob = new Blob([res as unknown as BlobPart])
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

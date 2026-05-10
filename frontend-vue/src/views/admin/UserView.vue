@@ -67,7 +67,7 @@
         <a-form-item label="邮箱" name="email">
           <a-input v-model:value="formState.email" placeholder="请输入邮箱" />
         </a-form-item>
-        <a-form-item label="显示名称" name="displayName">
+        <a-form-item label="显示名称" name="realName">
           <a-input v-model:value="formState.realName" placeholder="请输入显示名称" />
         </a-form-item>
         <a-form-item v-if="!editingUser" label="密码" name="password">
@@ -75,8 +75,8 @@
         </a-form-item>
         <a-form-item label="状态" name="status">
           <a-select v-model:value="formState.status">
-            <a-select-option value="active">启用</a-select-option>
-            <a-select-option value="disabled">禁用</a-select-option>
+            <a-select-option :value="1">启用</a-select-option>
+            <a-select-option :value="0">禁用</a-select-option>
           </a-select>
         </a-form-item>
       </a-form>
@@ -89,7 +89,7 @@
       :confirm-loading="confirmLoading"
       @ok="handleRoleSubmit"
     >
-      <p>为用户 <strong>{{ editingUser?.displayName }}</strong> 分配角色：</p>
+      <p>为用户 <strong>{{ editingUser?.realName || editingUser?.displayName }}</strong> 分配角色：</p>
       <a-checkbox-group v-model:value="selectedRoleIds" :options="roleOptions" />
     </a-modal>
   </div>
@@ -127,9 +127,10 @@ const { loading, dataSource, pagination, searchParams, fetchData, handleTableCha
 const formState = reactive<UserForm>({
   username: '',
   email: '',
-  displayName: '',
+  realName: '',
+  phone: '',
   password: '',
-  status: 'active',
+  status: 1,
 })
 
 const formRules = {
@@ -138,13 +139,13 @@ const formRules = {
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email' as const, message: '请输入有效邮箱', trigger: 'blur' },
   ],
-  displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
+  realName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
 const columns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },
-  { title: '显示名称', dataIndex: 'realName'' },
+  { title: '显示名称', dataIndex: 'realName', key: 'realName' },
   { title: '邮箱', dataIndex: 'email', key: 'email' },
   { title: '租户', dataIndex: 'tenantName', key: 'tenantName' },
   { title: '角色', dataIndex: 'roles', key: 'roles' },
@@ -155,7 +156,7 @@ const columns = [
 
 function openCreateModal() {
   editingUser.value = null
-  Object.assign(formState, { username: '', email: '', displayName: '', password: '', status: 'active' })
+  Object.assign(formState, { username: '', email: '', realName: '', phone: '', password: '', status: 1 })
   userModalVisible.value = true
 }
 
@@ -164,7 +165,8 @@ function openEditModal(user: User) {
   Object.assign(formState, {
     username: user.username,
     email: user.email,
-    displayName: user.displayName,
+    realName: user.realName || user.displayName || '',
+    phone: user.phone || '',
     status: user.status,
   })
   userModalVisible.value = true

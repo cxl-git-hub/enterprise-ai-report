@@ -30,7 +30,7 @@ public class UserController {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(SysUser::getUsername, keyword)
-                    .or().like(SysUser::getNickname, keyword)
+                    .or().like(SysUser::getRealName, keyword)
                     .or().like(SysUser::getEmail, keyword);
         }
         wrapper.orderByDesc(SysUser::getCreatedAt);

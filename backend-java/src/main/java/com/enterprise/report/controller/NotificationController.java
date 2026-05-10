@@ -88,8 +88,12 @@ public class NotificationController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        notificationMapper.deleteById(id);
+    public ApiResponse<Void> delete(@PathVariable Long id, @AuthenticationPrincipal UserDetailsImpl user) {
+        Long tenantId = TenantContext.getTenantId();
+        Notification notification = notificationMapper.selectById(id);
+        if (notification != null && notification.getTenantId().equals(tenantId) && notification.getUserId().equals(user.getId())) {
+            notificationMapper.deleteById(id);
+        }
         return ApiResponse.success();
     }
 }

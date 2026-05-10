@@ -47,7 +47,7 @@
             </a-tooltip>
           </template>
           <template v-if="column.key === 'variables'">
-            <a-tag v-for="v in (record.variables || [])" :key="v" size="small">{{ `{{${v}}}` }}</a-tag>
+            <a-tag v-for="v in (record.variables || [])" :key="v" size="small">{{ wrapVariable(v) }}</a-tag>
           </template>
           <template v-if="column.key === 'action'">
             <div class="table-actions">
@@ -94,7 +94,7 @@
           <a-textarea v-model:value="formState.description" :rows="2" placeholder="请输入描述" />
         </a-form-item>
         <a-form-item label="模板内容" name="templateContent">
-          <template #tooltip><span>支持 {{variable}} 格式的变量占位符</span></template>
+          <template #tooltip><span v-text="'支持 {{variable}} 格式的变量占位符'"></span></template>
           <div class="code-editor">
             <a-textarea
               v-model:value="formState.templateContent"
@@ -116,7 +116,7 @@
             placeholder="输入变量名后回车添加"
             :token-separators="[',']"
           />
-          <div class="field-hint">从模板中自动提取的 {{variable}} 变量</div>
+          <div class="field-hint" v-text="'从模板中自动提取的 {{variable}} 变量'"></div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -157,6 +157,10 @@ const { loading, dataSource, pagination, searchParams, fetchData, handleTableCha
   })
 
 const { visible: modalVisible, confirmLoading, editingId, openModal, handleOk } = useModal()
+
+function wrapVariable(v: string): string {
+  return `{{${v}}}`
+}
 
 const formState = reactive<PromptForm>({
   name: '',

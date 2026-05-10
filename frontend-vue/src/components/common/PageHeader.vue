@@ -1,6 +1,6 @@
 <template>
   <div class="page-header">
-    <a-breadcrumb v-if="breadcrumbs.length" class="page-breadcrumb">
+    <a-breadcrumb v-if="breadcrumbs && breadcrumbs.length" class="page-breadcrumb">
       <a-breadcrumb-item v-for="(item, index) in breadcrumbs" :key="index">
         <router-link v-if="item.path && index < breadcrumbs.length - 1" :to="item.path">
           {{ item.title }}

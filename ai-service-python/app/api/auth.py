@@ -19,7 +19,7 @@ async def login(
 ):
     """Authenticate user and return JWT token."""
     auth_service = AuthService(db)
-    user = await auth_service.authenticate_user(request.email, request.password)
+    user = await auth_service.authenticate_user(request.username, request.password)
 
     if not user:
         raise HTTPException(
@@ -30,8 +30,8 @@ async def login(
     access_token = auth_service.create_access_token(
         user_id=user.id,
         tenant_id=user.tenant_id,
-        email=user.email,
-        role=user.role,
+        username=user.username,
+        role="USER",
     )
 
     from app.core.config import settings
@@ -42,8 +42,8 @@ async def login(
             token_type="bearer",
             expires_in=settings.JWT_EXPIRE_MINUTES * 60,
             user_id=user.id,
-            email=user.email,
-            role=user.role,
+            username=user.username,
+            role="USER",
             tenant_id=user.tenant_id,
         )
     )

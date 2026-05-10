@@ -6,6 +6,7 @@ import com.enterprise.report.dto.ApiResponse;
 import com.enterprise.report.dto.PageResult;
 import com.enterprise.report.entity.AuditLog;
 import com.enterprise.report.mapper.AuditLogMapper;
+import com.enterprise.report.security.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +24,9 @@ public class AuditLogController {
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String resourceType,
             @RequestParam(required = false) Long userId) {
+        Long tenantId = TenantContext.getTenantId();
         LambdaQueryWrapper<AuditLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AuditLog::getTenantId, tenantId);
         if (action != null && !action.isEmpty()) {
             wrapper.eq(AuditLog::getAction, action);
         }

@@ -16,6 +16,7 @@ export interface TokenResponse {
   accessToken: string
   refreshToken: string
   expiresIn: number
+  tenantId?: string | number
 }
 
 export interface UserInfo {
