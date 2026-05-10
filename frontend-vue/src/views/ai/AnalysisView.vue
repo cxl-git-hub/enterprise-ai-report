@@ -151,9 +151,9 @@ async function handleAnalyze() {
   analysisResult.value = null
   try {
     const res = await post<{ data: AnalysisResult }>('/ai/analysis', {
-      datasetId: selectedDatasetId.value,
-      type: analysisType.value,
-      prompt: analysisPrompt.value,
+      dataset_ids: [selectedDatasetId.value],
+      analysis_type: analysisType.value,
+      query: analysisPrompt.value,
     })
     analysisResult.value = res.data
     await nextTick()

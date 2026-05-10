@@ -8,9 +8,9 @@
         <a-card :bordered="false" class="page-card profile-card">
           <div class="avatar-section">
             <a-avatar :size="96" :style="{ backgroundColor: '#1677ff', fontSize: '40px' }">
-              {{ user?.displayName?.charAt(0) || user?.username?.charAt(0) || 'U' }}
+              {{ user?.realName?.charAt(0) || user?.username?.charAt(0) || 'U' }}
             </a-avatar>
-            <h2 class="user-name">{{ user?.displayName || user?.username }}</h2>
+            <h2 class="user-name">{{ user?.realName || user?.username }}</h2>
             <p class="user-role">
               <a-tag v-for="role in user?.roles" :key="role" color="blue">{{ role }}</a-tag>
             </p>
@@ -54,7 +54,7 @@
             <a-row :gutter="16">
               <a-col :span="12">
                 <a-form-item label="显示名称" name="displayName">
-                  <a-input v-model:value="profileForm.displayName" placeholder="请输入显示名称" />
+                  <a-input v-model:value="profileForm.realName" placeholder="请输入显示名称" />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
@@ -186,7 +186,7 @@ const changingPassword = ref(false)
 const savingNotify = ref(false)
 
 const profileForm = reactive({
-  displayName: user?.displayName || '',
+  realName: user?.realName || '',
   email: user?.email || '',
   phone: '',
   locale: 'zh-CN',
