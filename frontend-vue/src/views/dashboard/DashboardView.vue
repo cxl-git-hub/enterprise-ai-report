@@ -236,22 +236,30 @@ function refreshAll() {
 const autoRefresh = ref(false)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
+function handleResize() {
+  chartInstance?.resize()
+}
+
 watch(autoRefresh, (val) => {
   if (refreshTimer) {
     clearInterval(refreshTimer)
     refreshTimer = null
   }
   if (val) {
-    refreshTimer = setInterval(refreshAll, 30000) // Refresh every 30 seconds
+    refreshTimer = setInterval(refreshAll, 30000)
   }
 })
 
 onMounted(() => {
   refreshAll()
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
+  chartInstance?.dispose()
+  chartInstance = null
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 

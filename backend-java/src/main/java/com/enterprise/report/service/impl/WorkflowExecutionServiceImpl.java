@@ -9,6 +9,7 @@ import com.enterprise.report.exception.BusinessException;
 import com.enterprise.report.mapper.*;
 import com.enterprise.report.service.WorkflowExecutionService;
 import com.enterprise.report.service.WorkflowService;
+import com.enterprise.report.service.NotificationService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class WorkflowExecutionServiceImpl extends ServiceImpl<WorkflowRunMapper,
     private final WorkflowStateSnapshotMapper stateSnapshotMapper;
     private final DagExecutor dagExecutor;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -66,6 +68,18 @@ public class WorkflowExecutionServiceImpl extends ServiceImpl<WorkflowRunMapper,
             run.setEndTime(LocalDateTime.now());
             updateById(run);
             logExecution(run.getRunId(), null, "ERROR", "Workflow failed: " + e.getMessage(), null);
+        }
+
+        // Send notifications
+        try {
+            String wfName = workflow.getWorkflowName();
+            if (run.getState() == WorkflowState.SUCCESS) {
+                notificationService.notifyWorkflowComplete(run.getTenantId(), run.getTriggeredBy(), wfName, run.getId());
+            } else if (run.getState() == WorkflowState.FAILED) {
+                notificationService.notifyWorkflowFailed(run.getTenantId(), run.getTriggeredBy(), wfName, run.getId(), run.getErrorMessage());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send workflow notification: {}", e.getMessage());
         }
 
         return run;

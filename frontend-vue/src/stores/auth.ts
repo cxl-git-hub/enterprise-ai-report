@@ -37,6 +37,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('tenantId')
+    localStorage.removeItem('permissions')
+    localStorage.removeItem('roles')
   }
 
   async function login(username: string, password: string) {
@@ -55,6 +57,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authApi.getCurrentUser()
       user.value = res.data
+      // Persist permissions and roles for route guards
+      localStorage.setItem('permissions', JSON.stringify(res.data.permissions || []))
+      localStorage.setItem('roles', JSON.stringify(res.data.roles || []))
     } catch {
       clearAuth()
     }
