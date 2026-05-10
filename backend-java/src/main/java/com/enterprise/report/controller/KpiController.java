@@ -8,7 +8,9 @@ import com.enterprise.report.dto.kpi.KpiCreateRequest;
 import com.enterprise.report.dto.kpi.KpiExecuteRequest;
 import com.enterprise.report.dto.kpi.KpiResponse;
 import com.enterprise.report.entity.KpiDefinition;
+import com.enterprise.report.entity.KpiResult;
 import com.enterprise.report.exception.BusinessException;
+import com.enterprise.report.mapper.KpiResultMapper;
 import com.enterprise.report.security.TenantContext;
 import com.enterprise.report.service.KpiService;
 import jakarta.validation.Valid;
@@ -16,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/kpis")
@@ -23,6 +27,7 @@ import java.math.BigDecimal;
 public class KpiController {
 
     private final KpiService kpiService;
+    private final KpiResultMapper kpiResultMapper;
 
     @GetMapping
     public ApiResponse<PageResult<KpiDefinition>> list(
@@ -86,5 +91,41 @@ public class KpiController {
         }
         request.setKpiId(id);
         return ApiResponse.success(kpiService.executeKpi(request));
+    }
+
+    @GetMapping("/{id}/trend")
+    public ApiResponse<List<Map<String, Object>>> getTrend(
+            @PathVariable Long id,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "30") Integer limit) {
+        Long tenantId = TenantContext.getTenantId();
+        LambdaQueryWrapper<KpiResult> wrapper = new LambdaQueryWrapper<KpiResult>()
+                .eq(KpiResult::getKpiId, id)
+                .eq(KpiResult::getTenantId, tenantId)
+                .eq(KpiResult::getStatus, 1);
+        if (startDate != null && !startDate.isEmpty()) {
+            wrapper.ge(KpiResult::getPeriodStart, startDate);
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            wrapper.le(KpiResult::getPeriodEnd, endDate);
+        }
+        wrapper.orderByDesc(KpiResult::getCreatedAt)
+                .last("LIMIT " + limit);
+
+        List<KpiResult> results = kpiResultMapper.selectList(wrapper);
+        // Reverse to chronological order
+        Collections.reverse(results);
+
+        List<Map<String, Object>> trend = results.stream().map(r -> {
+            Map<String, Object> point = new HashMap<>();
+            point.put("date", r.getPeriodStart());
+            point.put("value", r.getValue());
+            point.put("formattedValue", r.getFormattedValue());
+            point.put("executedAt", r.getCreatedAt());
+            return point;
+        }).collect(Collectors.toList());
+
+        return ApiResponse.success(trend);
     }
 }

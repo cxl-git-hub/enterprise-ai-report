@@ -11,6 +11,7 @@ public class WorkflowRunResponse {
     private Long id;
     private Long tenantId;
     private Long workflowId;
+    private String workflowName;
     private Integer workflowVersion;
     private String runId;
     private String triggerType;

@@ -287,6 +287,9 @@ enterprise-ai-report/
 - `POST /api/config/snapshots` - 创建快照
 - `GET /api/config/snapshots` - 快照列表
 - `POST /api/config/snapshots/{id}/restore` - 恢复快照
+- `GET /api/config/snapshots/diff?id1=1&id2=2` - 快照对比
+- `GET /api/config/export` - 导出配置JSON
+- `POST /api/config/import` - 导入配置JSON
 
 ### Workflow
 - `POST /api/workflows/{id}/trigger` - 触发工作流
@@ -309,8 +312,10 @@ enterprise-ai-report/
 
 ### Notifications
 - `GET /api/notifications` - 通知列表
+- `GET /api/notifications/unread-count` - 未读数量
 - `PUT /api/notifications/{id}/read` - 标记已读
 - `PUT /api/notifications/read-all` - 全部已读
+- `PUT /api/notifications/clear` - 清空通知
 - `DELETE /api/notifications/{id}` - 删除通知
 
 ### Settings
@@ -332,6 +337,8 @@ enterprise-ai-report/
 7. **审计日志**: 全操作审计追踪
 8. **CORS安全**: 白名单限制(非 `allow_origins=["*"]`)
 9. **密码加密**: BCrypt + AES加密存储
+10. **API限流**: Redis滑动窗口限流，默认100次/分钟/租户
+11. **数据脱敏**: 手机/邮箱/身份证/银行卡自动脱敏
 
 ## 📊 数据库
 

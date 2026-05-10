@@ -72,7 +72,7 @@ public class WorkflowExecutionServiceImpl extends ServiceImpl<WorkflowRunMapper,
 
         // Send notifications
         try {
-            String wfName = workflow.getWorkflowName();
+            String wfName = workflow.getName();
             if (run.getState() == WorkflowState.SUCCESS) {
                 notificationService.notifyWorkflowComplete(run.getTenantId(), run.getTriggeredBy(), wfName, run.getId());
             } else if (run.getState() == WorkflowState.FAILED) {

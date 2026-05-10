@@ -38,12 +38,12 @@
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'category'">
-            <a-tag :color="categoryColor[record.category] || 'default'">{{ categoryLabel[record.category] || record.category }}</a-tag>
+          <template v-if="column.key === 'promptType'">
+            <a-tag :color="categoryColor[record.promptType] || 'default'">{{ categoryLabel[record.promptType] || record.promptType }}</a-tag>
           </template>
-          <template v-if="column.key === 'template'">
-            <a-tooltip :title="record.template">
-              <span class="template-preview">{{ truncate(record.template, 60) }}</span>
+          <template v-if="column.key === 'templateContent'">
+            <a-tooltip :title="record.templateContent">
+              <span class="template-preview">{{ truncate(record.templateContent, 60) }}</span>
             </a-tooltip>
           </template>
           <template v-if="column.key === 'variables'">
@@ -80,8 +80,8 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="分类" name="category">
-              <a-select v-model:value="formState.promptType" placeholder="请选择分类">
+            <a-form-item label="分类" name="promptType">
+              <a-select v-model:value="formState.promptType" placeholder="请选择分类" allow-clear>
                 <a-select-option value="nl2sql">NL2SQL</a-select-option>
                 <a-select-option value="analysis">分析</a-select-option>
                 <a-select-option value="report">报表</a-select-option>
@@ -93,7 +93,7 @@
         <a-form-item label="描述" name="description">
           <a-textarea v-model:value="formState.description" :rows="2" placeholder="请输入描述" />
         </a-form-item>
-        <a-form-item label="模板内容" name="template">
+        <a-form-item label="模板内容" name="templateContent">
           <template #tooltip><span>支持 {{variable}} 格式的变量占位符</span></template>
           <div class="code-editor">
             <a-textarea
@@ -161,21 +161,23 @@ const { visible: modalVisible, confirmLoading, editingId, openModal, handleOk } 
 const formState = reactive<PromptForm>({
   name: '',
   description: '',
+  templateContent: '',
   template: '',
   variables: [],
-  category: 'general',
+  schemaId: '',
+  promptType: 'general',
 })
 
 const formRules = {
   name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
-  template: [{ required: true, message: '请输入模板内容', trigger: 'blur' }],
+  promptType: [{ required: true, message: '请选择分类', trigger: 'change' }],
+  templateContent: [{ required: true, message: '请输入模板内容', trigger: 'blur' }],
 }
 
 const columns = [
   { title: '名称', dataIndex: 'name', key: 'name' },
-  { title: '分类', dataIndex: 'category', key: 'category', width: 100 },
-  { title: '模板预览', dataIndex: 'template', key: 'template', ellipsis: true },
+  { title: '分类', dataIndex: 'promptType', key: 'promptType', width: 100 },
+  { title: '模板预览', dataIndex: 'templateContent', key: 'templateContent', ellipsis: true },
   { title: '变量', dataIndex: 'variables', key: 'variables', width: 200 },
   { title: '版本', dataIndex: 'version', key: 'version', width: 80 },
   { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 180 },
@@ -188,14 +190,21 @@ function truncate(str: string, len: number) {
 
 function openCreateModal() {
   editingId.value = null
-  Object.assign(formState, { name: '', description: '', templateContent: '', variables: '', schemaId: '' })
+  Object.assign(formState, { name: '', description: '', templateContent: '', variables: [], schemaId: '', promptType: 'general' })
   openModal()
 }
 
 async function openEditModal(record: Prompt) {
   openModal(record.id)
   const res = await promptApi.detail(record.id)
-  Object.assign(formState, res.data)
+  Object.assign(formState, {
+    name: res.data.name,
+    description: res.data.description,
+    templateContent: res.data.templateContent,
+    variables: res.data.variables || [],
+    schemaId: res.data.schemaId,
+    promptType: res.data.promptType || 'general',
+  })
 }
 
 function aiSuggestTemplate() {
@@ -212,6 +221,7 @@ function aiSuggestTemplate() {
   }).then((res) => {
     if (res?.data?.template) {
       formState.templateContent = res.data.template
+      formState.template = res.data.template
       // Auto-extract variables
       const matches = res.data.template.match(/\{\{(\w+)\}\}/g)
       if (matches) {
@@ -229,10 +239,13 @@ function aiSuggestTemplate() {
 async function handleSubmit() {
   await formRef.value?.validateFields()
   // Auto-extract variables from template
-  const matches = formState.templateContent.match(/\{\{(\w+)\}\}/g)
+  const templateText = formState.templateContent || formState.template || ''
+  const matches = templateText.match(/\{\{(\w+)\}\}/g)
   if (matches) {
     formState.variables = [...new Set(matches.map((m: string) => m.replace(/[{}]/g, '')))]
   }
+  // Sync template field
+  formState.template = formState.templateContent
   await handleOk(async () => {
     if (editingId.value) {
       await promptApi.update(editingId.value, formState)

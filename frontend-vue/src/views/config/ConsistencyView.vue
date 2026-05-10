@@ -9,6 +9,14 @@
           <a-button @click="handleCreateSnapshot">
             <CameraOutlined /> 创建快照
           </a-button>
+          <a-button @click="handleExportConfig">
+            <DownloadOutlined /> 导出配置
+          </a-button>
+          <a-upload :before-upload="handleImportConfig" :show-upload-list="false" accept=".json">
+            <a-button>
+              <UploadOutlined /> 导入配置
+            </a-button>
+          </a-upload>
         </a-space>
       </template>
     </PageHeader>
@@ -173,6 +181,8 @@ import {
   CameraOutlined,
   CloseCircleOutlined,
   WarningOutlined,
+  DownloadOutlined,
+  UploadOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { configApi, type ValidationResult, type Snapshot, type DependencyGraph, type DependencyNode } from '@/api/config'
@@ -312,6 +322,36 @@ async function loadSnapshots() {
   } catch {} finally {
     snapshotLoading.value = false
   }
+}
+
+async function handleExportConfig() {
+  try {
+    const res = await configApi.exportConfig()
+    const blob = new Blob([res as BlobPart], { type: 'application/json' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `config_export_${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    message.success('配置导出成功')
+  } catch {
+    message.error('配置导出失败')
+  }
+}
+
+async function handleImportConfig(file: File) {
+  try {
+    await configApi.importConfig(file, false)
+    message.success('配置导入成功')
+    loadGraph()
+    loadSnapshots()
+  } catch {
+    message.error('配置导入失败')
+  }
+  return false // Prevent default upload
 }
 
 onMounted(() => {

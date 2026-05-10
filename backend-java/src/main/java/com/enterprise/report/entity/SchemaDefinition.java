@@ -19,6 +19,8 @@ public class SchemaDefinition {
     private String config;
     private Integer version;
     private String status;
+    @TableField(exist = false)
+    private String datasetName;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)

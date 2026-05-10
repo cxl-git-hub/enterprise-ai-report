@@ -14,9 +14,13 @@ public class Tenant {
     private String contactName;
     private String contactEmail;
     private String contactPhone;
+    private String planType;
     private Integer status;
     private Integer maxUsers;
     private Integer maxDatasources;
+    private Integer maxDatasets;
+    private Integer maxAiCallsPerDay;
+    private LocalDateTime expireTime;
     private String config;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

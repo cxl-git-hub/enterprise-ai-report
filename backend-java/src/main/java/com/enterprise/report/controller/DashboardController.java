@@ -48,12 +48,26 @@ public class DashboardController {
                         .orderByDesc(WorkflowRun::getCreatedAt)
                         .last("LIMIT " + limit));
 
+        // Collect workflowIds to resolve names
+        Set<Long> workflowIds = new HashSet<>();
+        for (WorkflowRun run : runs) {
+            if (run.getWorkflowId() != null) workflowIds.add(run.getWorkflowId());
+        }
+        Map<Long, String> workflowNames = new HashMap<>();
+        if (!workflowIds.isEmpty()) {
+            List<WorkflowDefinition> workflows = workflowService.listByIds(workflowIds);
+            for (WorkflowDefinition wf : workflows) {
+                workflowNames.put(wf.getId(), wf.getName());
+            }
+        }
+
         List<Map<String, Object>> result = new ArrayList<>();
         for (WorkflowRun run : runs) {
             Map<String, Object> item = new HashMap<>();
             item.put("id", run.getId());
-            item.put("workflowName", run.getWorkflowName() != null ? run.getWorkflowName() : "工作流 #" + run.getWorkflowId());
-            item.put("status", run.getState() != null ? run.getState().toLowerCase() : "unknown");
+            item.put("workflowId", run.getWorkflowId());
+            item.put("workflowName", workflowNames.getOrDefault(run.getWorkflowId(), "工作流 #" + run.getWorkflowId()));
+            item.put("status", run.getState() != null ? run.getState().name().toLowerCase() : "unknown");
             item.put("startedAt", run.getStartTime());
             item.put("duration", run.getDurationMs());
             result.add(item);
@@ -68,18 +82,24 @@ public class DashboardController {
         List<WorkflowRun> runs = workflowExecutionService.list(
                 new LambdaQueryWrapper<WorkflowRun>().eq(WorkflowRun::getTenantId, tenantId));
 
-        Map<String, Integer> distribution = new HashMap<>();
+        Map<String, Integer> distribution = new LinkedHashMap<>();
+        distribution.put("success", 0);
+        distribution.put("failed", 0);
+        distribution.put("running", 0);
+        distribution.put("pending", 0);
         for (WorkflowRun run : runs) {
-            String state = run.getState() != null ? run.getState().toLowerCase() : "unknown";
+            String state = run.getState() != null ? run.getState().name().toLowerCase() : "unknown";
             distribution.merge(state, 1, Integer::sum);
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
         distribution.forEach((status, count) -> {
-            Map<String, Object> item = new HashMap<>();
-            item.put("status", status);
-            item.put("count", count);
-            result.add(item);
+            if (count > 0) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("status", status);
+                item.put("count", count);
+                result.add(item);
+            }
         });
 
         return ApiResponse.success(result);

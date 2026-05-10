@@ -49,6 +49,7 @@
               <a-button type="link" size="small" @click="handleExecute(record)" :loading="executingId === record.id">
                 执行
               </a-button>
+              <a-button type="link" size="small" @click="openTrendChart(record)">趋势</a-button>
               <a-button type="link" size="small" @click="openVersionHistory(record)">版本</a-button>
               <a-button type="link" size="small" @click="openEditModal(record)">编辑</a-button>
               <ConfirmDelete @confirm="handleDelete(record.id)">
@@ -159,6 +160,44 @@
       </a-form>
     </a-modal>
 
+    <!-- Trend Chart Modal -->
+    <a-modal v-model:open="trendModalVisible" :title="`KPI趋势: ${trendKpiName}`" :footer="null" width="800px">
+      <a-spin :spinning="trendLoading">
+        <div v-if="trendData.length > 0" class="trend-chart">
+          <div class="trend-summary">
+            <a-row :gutter="16">
+              <a-col :span="8">
+                <a-statistic title="最新值" :value="trendData[trendData.length - 1]?.value" :suffix="trendKpiUnit" />
+              </a-col>
+              <a-col :span="8">
+                <a-statistic title="数据点" :value="trendData.length" />
+              </a-col>
+              <a-col :span="8">
+                <a-statistic title="时间范围" :value="`${trendData[0]?.date} ~ ${trendData[trendData.length - 1]?.date}`" />
+              </a-col>
+            </a-row>
+          </div>
+          <div class="trend-visual">
+            <div class="trend-bars">
+              <div
+                v-for="(point, idx) in trendData"
+                :key="idx"
+                class="trend-bar-wrapper"
+              >
+                <div
+                  class="trend-bar"
+                  :style="{ height: getBarHeight(point.value) + 'px', background: '#1677ff' }"
+                  :title="`${point.date}: ${point.value}`"
+                />
+                <span class="trend-label">{{ point.date?.slice(5) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <a-empty v-else description="暂无历史数据" />
+      </a-spin>
+    </a-modal>
+
     <!-- Version History Modal -->
     <a-modal v-model:open="versionModalVisible" title="版本历史" :footer="null" width="700px">
       <a-timeline>
@@ -207,6 +246,11 @@ const versionModalVisible = ref(false)
 const versionHistory = ref<KpiVersion[]>([])
 const currentKpi = ref<Kpi | null>(null)
 const schemaOptions = ref<Schema[]>([])
+const trendModalVisible = ref(false)
+const trendLoading = ref(false)
+const trendData = ref<Array<{ date: string; value: number; formattedValue?: string }>>([])
+const trendKpiName = ref('')
+const trendKpiUnit = ref('')
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =
   useTable<Kpi>({
@@ -244,6 +288,28 @@ const columns = [
 
 function truncate(str: string, len: number) {
   return str && str.length > len ? str.slice(0, len) + '...' : str
+}
+
+async function openTrendChart(record: Kpi) {
+  trendKpiName.value = record.name
+  trendKpiUnit.value = record.unit || ''
+  trendData.value = []
+  trendModalVisible.value = true
+  trendLoading.value = true
+  try {
+    const res = await kpiApi.getTrend(record.id, { limit: 30 })
+    trendData.value = res.data || []
+  } catch {
+    trendData.value = []
+  } finally {
+    trendLoading.value = false
+  }
+}
+
+function getBarHeight(value: number): number {
+  if (!trendData.value.length) return 0
+  const maxVal = Math.max(...trendData.value.map((d) => d.value), 1)
+  return Math.max(4, (value / maxVal) * 150)
 }
 
 function openCreateModal() {
@@ -364,5 +430,40 @@ onMounted(async () => {
   .version-time { color: #999; font-size: 12px; }
   .version-user { color: #666; font-size: 12px; }
   .version-note { color: #666; font-size: 13px; margin: 4px 0; }
+}
+
+.trend-chart {
+  .trend-summary { margin-bottom: 24px; }
+  .trend-visual { padding: 16px 0; }
+  .trend-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 200px;
+    padding: 0 8px;
+  }
+  .trend-bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .trend-bar {
+    width: 100%;
+    min-width: 8px;
+    max-width: 40px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.3s;
+    cursor: pointer;
+    &:hover { opacity: 0.8; }
+  }
+  .trend-label {
+    font-size: 10px;
+    color: #999;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
 }
 </style>

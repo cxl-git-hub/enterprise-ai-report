@@ -6,9 +6,11 @@ import com.enterprise.report.dto.ApiResponse;
 import com.enterprise.report.dto.PageResult;
 import com.enterprise.report.dto.schema.SchemaCreateRequest;
 import com.enterprise.report.dto.schema.SchemaResponse;
+import com.enterprise.report.entity.Dataset;
 import com.enterprise.report.entity.SchemaDefinition;
 import com.enterprise.report.exception.BusinessException;
 import com.enterprise.report.security.TenantContext;
+import com.enterprise.report.service.DatasetService;
 import com.enterprise.report.service.SchemaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ import java.util.List;
 public class SchemaController {
 
     private final SchemaService schemaService;
+    private final DatasetService datasetService;
 
     @GetMapping
     public ApiResponse<PageResult<SchemaDefinition>> list(
@@ -32,7 +35,9 @@ public class SchemaController {
             wrapper.like(SchemaDefinition::getName, keyword);
         }
         wrapper.orderByDesc(SchemaDefinition::getCreatedAt);
-        return ApiResponse.success(PageResult.from(schemaService.page(new Page<>(page, size), wrapper)));
+        Page<SchemaDefinition> result = schemaService.page(new Page<>(page, size), wrapper);
+        result.getRecords().forEach(this::populateDatasetName);
+        return ApiResponse.success(PageResult.from(result));
     }
 
     @GetMapping("/{id}")
@@ -41,6 +46,7 @@ public class SchemaController {
         if (schema == null) {
             throw new BusinessException(404, "Schema not found");
         }
+        populateDatasetName(schema);
         return ApiResponse.success(schema);
     }
 
@@ -80,5 +86,16 @@ public class SchemaController {
     @PostMapping("/{id}/activate-version/{version}")
     public ApiResponse<SchemaDefinition> activateVersion(@PathVariable Long id, @PathVariable Integer version) {
         return ApiResponse.success(schemaService.activateVersion(id, version));
+    }
+
+    private void populateDatasetName(SchemaDefinition schema) {
+        if (schema.getDatasetId() != null) {
+            try {
+                Dataset dataset = datasetService.getById(schema.getDatasetId());
+                schema.setDatasetName(dataset != null ? dataset.getName() : "");
+            } catch (Exception e) {
+                schema.setDatasetName("");
+            }
+        }
     }
 }

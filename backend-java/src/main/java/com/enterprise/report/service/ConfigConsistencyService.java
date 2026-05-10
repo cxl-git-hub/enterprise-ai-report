@@ -15,4 +15,5 @@ public interface ConfigConsistencyService {
     ConfigSnapshot getSnapshot(Long snapshotId);
     void rollback(Long snapshotId);
     SnapshotDiff diffSnapshots(Long id1, Long id2);
+    void importConfig(Long tenantId, String json, boolean merge);
 }

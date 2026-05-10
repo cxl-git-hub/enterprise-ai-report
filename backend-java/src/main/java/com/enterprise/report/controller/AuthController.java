@@ -9,7 +9,10 @@ import com.enterprise.report.service.UserService;
 import com.enterprise.report.mapper.KpiDefinitionMapper;
 import com.enterprise.report.mapper.WorkflowDefinitionMapper;
 import com.enterprise.report.mapper.ReportOutputMapper;
+import com.enterprise.report.mapper.SystemSettingMapper;
+import com.enterprise.report.entity.SystemSetting;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.enterprise.report.entity.KpiDefinition;
 import com.enterprise.report.entity.WorkflowDefinition;
 import com.enterprise.report.entity.ReportOutput;
@@ -34,6 +37,8 @@ public class AuthController {
     private final KpiDefinitionMapper kpiDefinitionMapper;
     private final WorkflowDefinitionMapper workflowDefinitionMapper;
     private final ReportOutputMapper reportOutputMapper;
+    private final SystemSettingMapper systemSettingMapper;
+    private final ObjectMapper objectMapper;
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -111,8 +116,31 @@ public class AuthController {
     @PutMapping("/notification-preferences")
     public ApiResponse<Void> saveNotificationPreferences(@RequestBody Map<String, Object> prefs,
                                                          @RequestHeader("Authorization") String authorization) {
-        // Store preferences in user metadata or separate table
-        // For now, acknowledge the save
+        String token = authorization.replace("Bearer ", "");
+        Long userId = tokenProvider.getUserIdFromToken(token);
+        Long tenantId = TenantContext.getTenantId();
+
+        try {
+            String prefsJson = objectMapper.writeValueAsString(prefs);
+            SystemSetting existing = systemSettingMapper.selectOne(
+                    new LambdaQueryWrapper<SystemSetting>()
+                            .eq(SystemSetting::getTenantId, tenantId)
+                            .eq(SystemSetting::getSettingGroup, "user_notifications")
+                            .eq(SystemSetting::getSettingKey, "user_" + userId));
+            if (existing != null) {
+                existing.setSettingValue(prefsJson);
+                systemSettingMapper.updateById(existing);
+            } else {
+                SystemSetting setting = new SystemSetting();
+                setting.setTenantId(tenantId);
+                setting.setSettingGroup("user_notifications");
+                setting.setSettingKey("user_" + userId);
+                setting.setSettingValue(prefsJson);
+                systemSettingMapper.insert(setting);
+            }
+        } catch (Exception e) {
+            return ApiResponse.error(500, "Failed to save preferences: " + e.getMessage());
+        }
         return ApiResponse.success();
     }
 
@@ -123,18 +151,16 @@ public class AuthController {
         Long tenantId = TenantContext.getTenantId();
 
         Map<String, Object> stats = new HashMap<>();
+        // Count tenant-level stats (createdBy filtering requires DB migration for created_by column)
         stats.put("kpiCount", kpiDefinitionMapper.selectCount(
                 new LambdaQueryWrapper<KpiDefinition>()
-                        .eq(KpiDefinition::getTenantId, tenantId)
-                        .eq(KpiDefinition::getCreatedBy, userId)));
+                        .eq(KpiDefinition::getTenantId, tenantId)));
         stats.put("workflowCount", workflowDefinitionMapper.selectCount(
                 new LambdaQueryWrapper<WorkflowDefinition>()
-                        .eq(WorkflowDefinition::getTenantId, tenantId)
-                        .eq(WorkflowDefinition::getCreatedBy, userId)));
+                        .eq(WorkflowDefinition::getTenantId, tenantId)));
         stats.put("reportCount", reportOutputMapper.selectCount(
                 new LambdaQueryWrapper<ReportOutput>()
-                        .eq(ReportOutput::getTenantId, tenantId)
-                        .eq(ReportOutput::getCreatedBy, userId)));
+                        .eq(ReportOutput::getTenantId, tenantId)));
         return ApiResponse.success(stats);
     }
 }

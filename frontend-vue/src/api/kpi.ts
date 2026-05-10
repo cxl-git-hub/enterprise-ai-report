@@ -44,16 +44,69 @@ export interface KpiExecuteResult {
   calculatedAt?: string
 }
 
+export interface KpiTrendPoint {
+  date: string
+  value: number
+  formattedValue?: string
+  executedAt?: string
+}
+
+/** Map backend KPI to frontend format */
+function mapKpiFromBackend(k: any): Kpi {
+  return {
+    id: k.id,
+    name: k.name,
+    description: k.description || '',
+    expression: k.expression || '',
+    unit: k.unit || '',
+    aggregationType: k.aggregationType || '',
+    schemaId: k.schemaId || '',
+    schemaName: k.schemaName || '',
+    version: k.version || 1,
+    status: k.status || 'draft',
+    createdAt: k.createdAt,
+    updatedAt: k.updatedAt,
+  }
+}
+
 export const kpiApi = {
-  list: (params: { page: number; pageSize: number; keyword?: string }) =>
-    get<{ data: { items: Kpi[]; total: number } }>('/kpis', params),
-  detail: (id: string) => get<{ data: Kpi }>(`/kpis/${id}`),
-  create: (data: KpiForm) => post<{ data: Kpi }>('/kpis', data),
-  update: (id: string, data: KpiForm) => put<{ data: Kpi }>(`/kpis/${id}`, data),
+  list: async (params: { page: number; pageSize: number; keyword?: string }) => {
+    const res = await get<{ data: { items: any[]; total: number } }>('/kpis', params)
+    return {
+      ...res,
+      data: {
+        items: (res.data?.items || []).map(mapKpiFromBackend),
+        total: res.data?.total || 0,
+      },
+    }
+  },
+  detail: async (id: string) => {
+    const res = await get<{ data: any }>(`/kpis/${id}`)
+    return { ...res, data: mapKpiFromBackend(res.data) }
+  },
+  create: (data: KpiForm) => post<{ data: any }>('/kpis', {
+    name: data.name,
+    description: data.description,
+    expression: data.expression,
+    unit: data.unit,
+    aggregationType: data.aggregationType,
+    schemaId: data.schemaId,
+    datasetId: null,
+  }),
+  update: (id: string, data: KpiForm) => put<{ data: any }>(`/kpis/${id}`, {
+    name: data.name,
+    description: data.description,
+    expression: data.expression,
+    unit: data.unit,
+    aggregationType: data.aggregationType,
+    schemaId: data.schemaId,
+  }),
   remove: (id: string) => del(`/kpis/${id}`),
   execute: (id: string, params?: Record<string, unknown>) =>
-    post<{ data: KpiExecuteResult }>(`/kpis/${id}/execute`, params),
+    post<{ data: KpiExecuteResult }>(`/kpis/${id}/execute`, params || {}),
   getVersions: (id: string) => get<{ data: KpiVersion[] }>(`/kpis/${id}/versions`),
   getVersion: (id: string, version: number) =>
     get<{ data: KpiVersion }>(`/kpis/${id}/versions/${version}`),
+  getTrend: (id: string, params?: { startDate?: string; endDate?: string; limit?: number }) =>
+    get<{ data: KpiTrendPoint[] }>(`/kpis/${id}/trend`, params as Record<string, unknown>),
 }

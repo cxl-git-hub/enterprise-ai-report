@@ -9,8 +9,11 @@ import com.enterprise.report.dto.workflow.WorkflowNodeRunResponse;
 import com.enterprise.report.entity.WorkflowRun;
 import com.enterprise.report.entity.WorkflowNodeRun;
 import com.enterprise.report.entity.WorkflowStateSnapshot;
+import com.enterprise.report.entity.WorkflowDefinition;
+import com.enterprise.report.enums.WorkflowState;
 import com.enterprise.report.mapper.WorkflowStateSnapshotMapper;
 import com.enterprise.report.service.WorkflowExecutionService;
+import com.enterprise.report.service.WorkflowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 public class WorkflowRunController {
 
     private final WorkflowExecutionService executionService;
+    private final WorkflowService workflowService;
     private final WorkflowStateSnapshotMapper snapshotMapper;
 
     @GetMapping
@@ -36,7 +40,13 @@ public class WorkflowRunController {
             wrapper.eq(WorkflowRun::getWorkflowId, workflowId);
         }
         if (status != null && !status.isEmpty()) {
-            wrapper.eq(WorkflowRun::getState, status);
+            // Convert lowercase frontend status to uppercase enum value
+            try {
+                WorkflowState state = WorkflowState.valueOf(status.toUpperCase());
+                wrapper.eq(WorkflowRun::getState, state);
+            } catch (IllegalArgumentException e) {
+                // Invalid status value, ignore filter
+            }
         }
         wrapper.orderByDesc(WorkflowRun::getCreatedAt);
         Page<WorkflowRun> result = executionService.page(new Page<>(page, size), wrapper);
@@ -104,6 +114,16 @@ public class WorkflowRunController {
         response.setTotalTokens(run.getTotalTokens());
         response.setTotalCost(run.getTotalCost());
         response.setCreatedAt(run.getCreatedAt());
+
+        // Look up workflow name
+        if (run.getWorkflowId() != null) {
+            try {
+                WorkflowDefinition wf = workflowService.getById(run.getWorkflowId());
+                response.setWorkflowName(wf != null ? wf.getName() : "工作流 #" + run.getWorkflowId());
+            } catch (Exception e) {
+                response.setWorkflowName("工作流 #" + run.getWorkflowId());
+            }
+        }
 
         if (run.getNodeRuns() != null) {
             response.setNodeRuns(run.getNodeRuns().stream()

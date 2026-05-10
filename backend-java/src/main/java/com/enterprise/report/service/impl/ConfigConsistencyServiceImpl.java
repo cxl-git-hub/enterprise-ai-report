@@ -371,6 +371,35 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
         return diff;
     }
 
+    @Override
+    @Transactional
+    public void importConfig(Long tenantId, String json, boolean merge) {
+        try {
+            Map<String, List<?>> data = objectMapper.readValue(json, new TypeReference<Map<String, List<?>>() {});
+
+            if (!merge) {
+                // Full replace: delete existing configs first
+                schemaMapper.delete(new LambdaQueryWrapper<SchemaDefinition>().eq(SchemaDefinition::getTenantId, tenantId));
+                kpiMapper.delete(new LambdaQueryWrapper<KpiDefinition>().eq(KpiDefinition::getTenantId, tenantId));
+                workflowMapper.delete(new LambdaQueryWrapper<WorkflowDefinition>().eq(WorkflowDefinition::getTenantId, tenantId));
+                promptMapper.delete(new LambdaQueryWrapper<PromptTemplate>().eq(PromptTemplate::getTenantId, tenantId));
+                reportMapper.delete(new LambdaQueryWrapper<ReportTemplate>().eq(ReportTemplate::getTenantId, tenantId));
+            }
+
+            // Import from JSON
+            restoreList(data.get("schemas"), SchemaDefinition.class, schemaMapper);
+            restoreList(data.get("kpis"), KpiDefinition.class, kpiMapper);
+            restoreList(data.get("workflows"), WorkflowDefinition.class, workflowMapper);
+            restoreList(data.get("prompts"), PromptTemplate.class, promptMapper);
+            restoreList(data.get("reports"), ReportTemplate.class, reportMapper);
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException(500, "Failed to import config: " + e.getMessage());
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private <T> void restoreList(List<?> data, Class<T> clazz, com.baomidou.mybatisplus.core.mapper.BaseMapper<T> mapper) {
         if (data == null) return;

@@ -46,7 +46,7 @@ public class WorkflowCronScheduler {
         for (WorkflowDefinition workflow : workflows) {
             try {
                 if (shouldExecute(workflow, now)) {
-                    log.info("Triggering scheduled workflow: {} (cron: {})", workflow.getWorkflowName(), workflow.getCronExpression());
+                    log.info("Triggering scheduled workflow: {} (cron: {})", workflow.getName(), workflow.getCronExpression());
 
                     Map<String, Object> params = new HashMap<>();
                     params.put("triggerType", "scheduled");
@@ -58,7 +58,7 @@ public class WorkflowCronScheduler {
                     log.info("Scheduled workflow triggered, runId: {}", run.getRunId());
                 }
             } catch (Exception e) {
-                log.error("Failed to trigger scheduled workflow {}: {}", workflow.getWorkflowName(), e.getMessage());
+                log.error("Failed to trigger scheduled workflow {}: {}", workflow.getName(), e.getMessage());
             }
         }
     }

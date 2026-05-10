@@ -1,5 +1,6 @@
 -- ============================================================
 -- Enterprise AI Automated Reporting Platform - Database Schema
+-- Aligned with Java Entity definitions
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS `ai_report` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -9,591 +10,608 @@ USE `ai_report`;
 -- 1. AUTH + RBAC + TENANT
 -- ============================================================
 
-CREATE TABLE `tenant` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `tenant_code` VARCHAR(64) NOT NULL COMMENT '租户编码',
-  `tenant_name` VARCHAR(128) NOT NULL COMMENT '租户名称',
-  `contact_name` VARCHAR(64) DEFAULT NULL COMMENT '联系人',
-  `contact_email` VARCHAR(128) DEFAULT NULL COMMENT '联系邮箱',
-  `contact_phone` VARCHAR(32) DEFAULT NULL COMMENT '联系电话',
-  `plan_type` VARCHAR(32) NOT NULL DEFAULT 'standard' COMMENT '套餐类型: standard/pro/enterprise',
-  `max_users` INT NOT NULL DEFAULT 10 COMMENT '最大用户数',
-  `max_datasets` INT NOT NULL DEFAULT 50 COMMENT '最大数据集数',
-  `max_ai_calls_per_day` INT NOT NULL DEFAULT 1000 COMMENT '每日AI调用上限',
-  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '0=禁用 1=启用',
-  `expire_time` DATETIME DEFAULT NULL COMMENT '过期时间',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS `tenant` (
+  `id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `code` VARCHAR(50) NOT NULL UNIQUE,
+  `contact_name` VARCHAR(50),
+  `contact_email` VARCHAR(100),
+  `contact_phone` VARCHAR(20),
+  `plan_type` VARCHAR(20) DEFAULT 'standard',
+  `status` INT DEFAULT 1,
+  `max_users` INT DEFAULT 100,
+  `max_datasources` INT DEFAULT 10,
+  `max_datasets` INT DEFAULT 50,
+  `max_ai_calls_per_day` INT DEFAULT 1000,
+  `expire_time` DATETIME,
+  `config` JSON,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_tenant_code` (`tenant_code`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB COMMENT='租户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租户表';
 
-CREATE TABLE `sys_user` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
-  `username` VARCHAR(64) NOT NULL COMMENT '用户名',
-  `password` VARCHAR(256) NOT NULL COMMENT '密码(BCrypt)',
-  `real_name` VARCHAR(64) DEFAULT NULL COMMENT '真实姓名',
-  `email` VARCHAR(128) DEFAULT NULL,
-  `phone` VARCHAR(32) DEFAULT NULL,
-  `avatar` VARCHAR(512) DEFAULT NULL,
-  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '0=禁用 1=启用',
-  `last_login_time` DATETIME DEFAULT NULL,
-  `last_login_ip` VARCHAR(64) DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS `sys_user` (
+  `id` BIGINT NOT NULL,
+  `tenant_id` BIGINT NOT NULL,
+  `username` VARCHAR(50) NOT NULL,
+  `password` VARCHAR(200) NOT NULL,
+  `real_name` VARCHAR(50),
+  `email` VARCHAR(100),
+  `phone` VARCHAR(20),
+  `avatar` VARCHAR(500),
+  `status` INT DEFAULT 1,
+  `last_login_time` DATETIME,
+  `last_login_ip` VARCHAR(50),
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_tenant_username` (`tenant_id`, `username`),
   KEY `idx_tenant_id` (`tenant_id`)
-) ENGINE=InnoDB COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
-CREATE TABLE `sys_role` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `sys_role` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `role_code` VARCHAR(64) NOT NULL COMMENT '角色编码',
-  `role_name` VARCHAR(128) NOT NULL COMMENT '角色名称',
-  `description` VARCHAR(256) DEFAULT NULL,
-  `is_system` TINYINT NOT NULL DEFAULT 0 COMMENT '是否系统角色',
-  `status` TINYINT NOT NULL DEFAULT 1,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `role_code` VARCHAR(50) NOT NULL,
+  `role_name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(200),
+  `is_system` INT DEFAULT 0,
+  `status` INT DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_tenant_role` (`tenant_id`, `role_code`)
-) ENGINE=InnoDB COMMENT='角色表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
 
-CREATE TABLE `sys_permission` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `parent_id` BIGINT DEFAULT 0 COMMENT '父权限ID',
-  `perm_code` VARCHAR(128) NOT NULL COMMENT '权限编码',
-  `perm_name` VARCHAR(128) NOT NULL COMMENT '权限名称',
-  `perm_type` VARCHAR(16) NOT NULL COMMENT 'menu/button/api',
-  `path` VARCHAR(256) DEFAULT NULL COMMENT '路由路径',
-  `icon` VARCHAR(64) DEFAULT NULL,
+CREATE TABLE IF NOT EXISTS `sys_permission` (
+  `id` BIGINT NOT NULL,
+  `parent_id` BIGINT DEFAULT 0,
+  `perm_code` VARCHAR(100) NOT NULL UNIQUE,
+  `perm_name` VARCHAR(100) NOT NULL,
+  `perm_type` VARCHAR(20),
+  `path` VARCHAR(200),
+  `icon` VARCHAR(50),
   `sort_order` INT DEFAULT 0,
-  `status` TINYINT NOT NULL DEFAULT 1,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_perm_code` (`perm_code`)
-) ENGINE=InnoDB COMMENT='权限表';
+  `status` INT DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限表';
 
-CREATE TABLE `sys_user_role` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `sys_user_role` (
+  `id` BIGINT NOT NULL,
   `user_id` BIGINT NOT NULL,
   `role_id` BIGINT NOT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_user_role` (`user_id`, `role_id`)
-) ENGINE=InnoDB COMMENT='用户角色关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户角色关联表';
 
-CREATE TABLE `sys_role_permission` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `sys_role_permission` (
+  `id` BIGINT NOT NULL,
   `role_id` BIGINT NOT NULL,
   `permission_id` BIGINT NOT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_role_perm` (`role_id`, `permission_id`)
-) ENGINE=InnoDB COMMENT='角色权限关联表';
+  UNIQUE KEY `uk_role_permission` (`role_id`, `permission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限关联表';
 
 -- ============================================================
--- 2. DATA HUB - Data Source & Dataset Management
+-- 2. DATA HUB
 -- ============================================================
 
-CREATE TABLE `data_source` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `data_source` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称',
-  `source_type` VARCHAR(32) NOT NULL COMMENT 'mysql/postgresql/api/excel/minio',
-  `connection_config` JSON NOT NULL COMMENT '连接配置(加密存储)',
-  `description` VARCHAR(512) DEFAULT NULL,
-  `status` TINYINT NOT NULL DEFAULT 1,
-  `last_sync_time` DATETIME DEFAULT NULL,
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `type` VARCHAR(20) NOT NULL,
+  `host` VARCHAR(200),
+  `port` INT,
+  `database_name` VARCHAR(100),
+  `username` VARCHAR(100),
+  `encrypted_password` VARCHAR(500),
+  `connection_url` VARCHAR(500),
+  `config` JSON,
+  `description` VARCHAR(500),
+  `status` INT DEFAULT 1,
+  `last_test_at` DATETIME,
+  `last_test_result` VARCHAR(500),
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_tenant_id` (`tenant_id`)
-) ENGINE=InnoDB COMMENT='数据源表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据源表';
 
-CREATE TABLE `dataset` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `dataset` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `source_id` BIGINT DEFAULT NULL COMMENT '关联数据源ID',
-  `dataset_name` VARCHAR(128) NOT NULL COMMENT '数据集名称',
-  `dataset_type` VARCHAR(32) NOT NULL COMMENT 'table/query/file/api',
-  `storage_location` VARCHAR(512) DEFAULT NULL COMMENT '存储位置(MinIO路径)',
+  `data_source_id` BIGINT,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `table_name` VARCHAR(100),
+  `query_sql` TEXT,
+  `config` JSON,
+  `status` INT DEFAULT 1,
+  `last_sync_at` DATETIME,
   `row_count` BIGINT DEFAULT 0,
-  `column_count` INT DEFAULT 0,
-  `description` VARCHAR(512) DEFAULT NULL,
-  `tags` JSON DEFAULT NULL COMMENT '标签',
-  `status` TINYINT NOT NULL DEFAULT 1,
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_tenant_id` (`tenant_id`),
-  KEY `idx_source_id` (`source_id`)
-) ENGINE=InnoDB COMMENT='数据集表';
+  KEY `idx_data_source_id` (`data_source_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据集表';
 
-CREATE TABLE `dataset_column` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `dataset_column` (
+  `id` BIGINT NOT NULL,
   `dataset_id` BIGINT NOT NULL,
-  `column_name` VARCHAR(128) NOT NULL,
-  `column_type` VARCHAR(32) NOT NULL COMMENT 'string/number/date/boolean',
-  `display_name` VARCHAR(128) DEFAULT NULL,
-  `is_primary_key` TINYINT DEFAULT 0,
-  `is_nullable` TINYINT DEFAULT 1,
-  `description` VARCHAR(256) DEFAULT NULL,
-  `sample_values` JSON DEFAULT NULL COMMENT '示例值',
+  `column_name` VARCHAR(100) NOT NULL,
+  `column_type` VARCHAR(50),
+  `display_name` VARCHAR(100),
+  `is_primary_key` INT DEFAULT 0,
+  `is_nullable` INT DEFAULT 1,
+  `description` VARCHAR(500),
+  `sample_values` JSON,
   `sort_order` INT DEFAULT 0,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_dataset_id` (`dataset_id`)
-) ENGINE=InnoDB COMMENT='数据集列定义';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据集列定义';
 
 -- ============================================================
--- 3. SCHEMA REGISTRY (Config Consistency Engine foundation)
+-- 3. SCHEMA REGISTRY
 -- ============================================================
 
-CREATE TABLE `schema_definition` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `schema_definition` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `schema_code` VARCHAR(128) NOT NULL COMMENT 'Schema编码',
-  `schema_name` VARCHAR(128) NOT NULL COMMENT 'Schema名称',
-  `version` INT NOT NULL DEFAULT 1 COMMENT '版本号',
-  `dataset_id` BIGINT DEFAULT NULL COMMENT '关联数据集',
-  `column_definitions` JSON NOT NULL COMMENT '列定义(JSON Schema格式)',
-  `validation_rules` JSON DEFAULT NULL COMMENT '校验规则',
-  `status` VARCHAR(16) NOT NULL DEFAULT 'active' COMMENT 'draft/active/deprecated',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `dataset_id` BIGINT,
+  `columns` JSON,
+  `metrics` JSON,
+  `dimensions` JSON,
+  `config` JSON,
+  `version` INT DEFAULT 1,
+  `status` VARCHAR(16) DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_schema_version` (`tenant_id`, `schema_code`, `version`),
   KEY `idx_tenant_id` (`tenant_id`)
-) ENGINE=InnoDB COMMENT='Schema定义表(版本化)';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Schema定义表';
 
 -- ============================================================
 -- 4. KPI ENGINE
 -- ============================================================
 
-CREATE TABLE `kpi_definition` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `kpi_definition` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `kpi_code` VARCHAR(128) NOT NULL COMMENT 'KPI编码',
-  `kpi_name` VARCHAR(128) NOT NULL COMMENT 'KPI名称',
-  `version` INT NOT NULL DEFAULT 1,
-  `schema_id` BIGINT NOT NULL COMMENT '关联Schema ID',
-  `schema_version` INT NOT NULL COMMENT '关联Schema版本',
-  `kpi_type` VARCHAR(32) NOT NULL COMMENT 'count/sum/avg/ratio/custom',
-  `expression` TEXT NOT NULL COMMENT 'KPI计算表达式(DSL)',
-  `dimensions` JSON DEFAULT NULL COMMENT '维度定义',
-  `filters` JSON DEFAULT NULL COMMENT '过滤条件',
-  `unit` VARCHAR(32) DEFAULT NULL COMMENT '单位',
-  `description` VARCHAR(512) DEFAULT NULL,
-  `business_explanation` TEXT DEFAULT NULL COMMENT '业务解释',
-  `status` VARCHAR(16) NOT NULL DEFAULT 'active',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `schema_id` BIGINT,
+  `dataset_id` BIGINT,
+  `expression` TEXT NOT NULL,
+  `unit` VARCHAR(20),
+  `aggregation_type` VARCHAR(20),
+  `filter_condition` TEXT,
+  `group_by` VARCHAR(200),
+  `config` JSON,
+  `version` INT DEFAULT 1,
+  `status` VARCHAR(16) DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_kpi_version` (`tenant_id`, `kpi_code`, `version`),
-  KEY `idx_schema_id` (`schema_id`),
-  KEY `idx_tenant_id` (`tenant_id`)
-) ENGINE=InnoDB COMMENT='KPI定义表(版本化)';
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_schema_id` (`schema_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='KPI定义表';
 
-CREATE TABLE `kpi_result` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `kpi_result` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `kpi_id` BIGINT NOT NULL COMMENT 'KPI定义ID',
-  `kpi_version` INT NOT NULL,
-  `execution_id` VARCHAR(64) DEFAULT NULL COMMENT '执行批次ID',
-  `dimension_values` JSON DEFAULT NULL COMMENT '维度值',
-  `result_value` DECIMAL(20,4) DEFAULT NULL COMMENT '计算结果',
-  `result_text` VARCHAR(256) DEFAULT NULL COMMENT '文本结果',
-  `calc_time` DATETIME NOT NULL COMMENT '计算时间',
-  `data_range_start` DATETIME DEFAULT NULL,
-  `data_range_end` DATETIME DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `kpi_id` BIGINT NOT NULL,
+  `workflow_run_id` BIGINT,
+  `value` DECIMAL(20,6),
+  `formatted_value` VARCHAR(100),
+  `period_start` VARCHAR(50),
+  `period_end` VARCHAR(50),
+  `dimensions` JSON,
+  `metadata` JSON,
+  `status` INT DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `idx_kpi_id` (`kpi_id`),
-  KEY `idx_tenant_calc` (`tenant_id`, `calc_time`)
-) ENGINE=InnoDB COMMENT='KPI计算结果表';
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_kpi_id` (`kpi_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='KPI计算结果表';
 
 -- ============================================================
 -- 5. WORKFLOW ENGINE
 -- ============================================================
 
-CREATE TABLE `workflow_definition` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `workflow_definition` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `workflow_code` VARCHAR(128) NOT NULL COMMENT '工作流编码',
-  `workflow_name` VARCHAR(128) NOT NULL COMMENT '工作流名称',
-  `version` INT NOT NULL DEFAULT 1,
-  `description` VARCHAR(512) DEFAULT NULL,
-  `dag_definition` JSON NOT NULL COMMENT 'DAG定义(节点+边)',
-  `trigger_type` VARCHAR(32) NOT NULL DEFAULT 'manual' COMMENT 'manual/cron/event',
-  `cron_expression` VARCHAR(64) DEFAULT NULL COMMENT 'Cron表达式',
-  `timeout_seconds` INT DEFAULT 3600 COMMENT '超时时间(秒)',
-  `max_retries` INT DEFAULT 3 COMMENT '最大重试次数',
-  `retry_delay_seconds` INT DEFAULT 60 COMMENT '重试延迟(秒)',
-  `status` VARCHAR(16) NOT NULL DEFAULT 'draft' COMMENT 'draft/active/disabled',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `dag_definition` JSON NOT NULL,
+  `trigger_type` VARCHAR(20) DEFAULT 'manual',
+  `cron_expression` VARCHAR(50),
+  `config` JSON,
+  `version` INT DEFAULT 1,
+  `state` VARCHAR(20) DEFAULT 'PENDING',
+  `status` VARCHAR(16) DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_workflow_version` (`tenant_id`, `workflow_code`, `version`),
   KEY `idx_tenant_id` (`tenant_id`)
-) ENGINE=InnoDB COMMENT='工作流定义表(版本化)';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作流定义表';
 
 -- ============================================================
--- 6. EXECUTION STATE & OBSERVABILITY ENGINE
+-- 6. EXECUTION STATE & OBSERVABILITY
 -- ============================================================
 
-CREATE TABLE `workflow_run` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `workflow_run` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
   `workflow_id` BIGINT NOT NULL,
-  `workflow_version` INT NOT NULL,
-  `run_id` VARCHAR(64) NOT NULL COMMENT '运行唯一ID(UUID)',
-  `trigger_type` VARCHAR(32) NOT NULL COMMENT 'manual/cron/event',
-  `triggered_by` BIGINT DEFAULT NULL COMMENT '触发者用户ID',
-  `state` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/RUNNING/SUCCESS/FAILED/RETRYING/PAUSED/CANCELLED',
-  `current_node_id` VARCHAR(128) DEFAULT NULL COMMENT '当前执行节点',
-  `input_params` JSON DEFAULT NULL COMMENT '输入参数',
-  `output_result` JSON DEFAULT NULL COMMENT '输出结果',
-  `error_message` TEXT DEFAULT NULL COMMENT '错误信息',
-  `start_time` DATETIME DEFAULT NULL,
-  `end_time` DATETIME DEFAULT NULL,
-  `duration_ms` BIGINT DEFAULT NULL COMMENT '执行耗时(毫秒)',
-  `total_tokens` BIGINT DEFAULT 0 COMMENT '总Token消耗',
-  `total_cost` DECIMAL(10,4) DEFAULT 0 COMMENT '总成本(元)',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `workflow_version` INT DEFAULT 1,
+  `run_id` VARCHAR(64) NOT NULL,
+  `trigger_type` VARCHAR(20),
+  `triggered_by` BIGINT,
+  `state` VARCHAR(20) DEFAULT 'PENDING',
+  `current_node_id` VARCHAR(128),
+  `input_params` JSON,
+  `output_result` JSON,
+  `error_message` TEXT,
+  `start_time` DATETIME,
+  `end_time` DATETIME,
+  `duration_ms` BIGINT,
+  `total_tokens` BIGINT DEFAULT 0,
+  `total_cost` DECIMAL(10,4) DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_run_id` (`run_id`),
-  KEY `idx_tenant_workflow` (`tenant_id`, `workflow_id`),
-  KEY `idx_state` (`state`),
-  KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB COMMENT='工作流运行记录表';
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_workflow_id` (`workflow_id`),
+  KEY `idx_state` (`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作流运行记录表';
 
-CREATE TABLE `workflow_node_run` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `run_id` VARCHAR(64) NOT NULL COMMENT '关联workflow_run.run_id',
-  `node_id` VARCHAR(128) NOT NULL COMMENT 'DAG节点ID',
-  `node_type` VARCHAR(32) NOT NULL COMMENT 'kpi_calc/ai_analysis/data_fetch/output/report',
-  `node_name` VARCHAR(128) DEFAULT NULL,
-  `state` VARCHAR(16) NOT NULL DEFAULT 'PENDING',
-  `input_data` JSON DEFAULT NULL,
-  `output_data` JSON DEFAULT NULL,
-  `error_message` TEXT DEFAULT NULL,
+CREATE TABLE IF NOT EXISTS `workflow_node_run` (
+  `id` BIGINT NOT NULL,
+  `tenant_id` BIGINT,
+  `run_id` VARCHAR(64) NOT NULL,
+  `node_id` VARCHAR(128) NOT NULL,
+  `node_type` VARCHAR(50),
+  `node_name` VARCHAR(100),
+  `state` VARCHAR(20) DEFAULT 'PENDING',
+  `input_data` JSON,
+  `output_data` JSON,
+  `error_message` TEXT,
   `retry_count` INT DEFAULT 0,
-  `start_time` DATETIME DEFAULT NULL,
-  `end_time` DATETIME DEFAULT NULL,
-  `duration_ms` BIGINT DEFAULT NULL,
+  `start_time` DATETIME,
+  `end_time` DATETIME,
+  `duration_ms` BIGINT,
   `tokens_used` BIGINT DEFAULT 0,
   `cost` DECIMAL(10,4) DEFAULT 0,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_run_id` (`run_id`),
-  KEY `idx_node_state` (`node_id`, `state`)
-) ENGINE=InnoDB COMMENT='工作流节点执行记录表';
-
-CREATE TABLE `workflow_execution_log` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `run_id` VARCHAR(64) NOT NULL,
-  `node_id` VARCHAR(128) DEFAULT NULL,
-  `log_level` VARCHAR(16) NOT NULL DEFAULT 'INFO' COMMENT 'DEBUG/INFO/WARN/ERROR',
-  `message` TEXT NOT NULL,
-  `context_data` JSON DEFAULT NULL COMMENT '上下文数据',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_run_id` (`run_id`),
-  KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB COMMENT='工作流执行日志表';
-
-CREATE TABLE `workflow_state_snapshot` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `run_id` VARCHAR(64) NOT NULL,
-  `snapshot_name` VARCHAR(128) NOT NULL COMMENT '快照名称',
-  `node_states` JSON NOT NULL COMMENT '所有节点状态',
-  `global_state` JSON DEFAULT NULL COMMENT '全局状态',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_run_id` (`run_id`)
-) ENGINE=InnoDB COMMENT='工作流状态快照表(用于恢复)';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作流节点执行记录表';
+
+CREATE TABLE IF NOT EXISTS `workflow_execution_log` (
+  `id` BIGINT NOT NULL,
+  `run_id` VARCHAR(64) NOT NULL,
+  `node_id` VARCHAR(128),
+  `log_level` VARCHAR(10) DEFAULT 'INFO',
+  `message` TEXT,
+  `context_data` JSON,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_run_id` (`run_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作流执行日志表';
+
+CREATE TABLE IF NOT EXISTS `workflow_state_snapshot` (
+  `id` BIGINT NOT NULL,
+  `tenant_id` BIGINT,
+  `workflow_run_id` BIGINT NOT NULL,
+  `snapshot_data` JSON,
+  `current_node_id` VARCHAR(128),
+  `completed_nodes` TEXT,
+  `failed_nodes` TEXT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_workflow_run_id` (`workflow_run_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作流状态快照表';
 
 -- ============================================================
 -- 7. CONFIG CONSISTENCY ENGINE
 -- ============================================================
 
-CREATE TABLE `config_version` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `config_version` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `config_type` VARCHAR(32) NOT NULL COMMENT 'schema/kpi/workflow/prompt/report',
-  `config_id` BIGINT NOT NULL COMMENT '配置项ID',
-  `config_code` VARCHAR(128) NOT NULL COMMENT '配置编码',
-  `version` INT NOT NULL COMMENT '版本号',
-  `config_snapshot` JSON NOT NULL COMMENT '配置快照',
-  `change_summary` VARCHAR(512) DEFAULT NULL COMMENT '变更说明',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `config_type` VARCHAR(20) NOT NULL,
+  `config_id` BIGINT NOT NULL,
+  `version` INT NOT NULL,
+  `config_data` JSON NOT NULL,
+  `change_description` VARCHAR(500),
+  `created_by` BIGINT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_config_version` (`tenant_id`, `config_type`, `config_code`, `version`),
-  KEY `idx_tenant_type` (`tenant_id`, `config_type`)
-) ENGINE=InnoDB COMMENT='配置版本表';
+  KEY `idx_config` (`config_type`, `config_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配置版本表';
 
-CREATE TABLE `config_dependency_graph` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `config_dependency_graph` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `source_type` VARCHAR(32) NOT NULL COMMENT '源配置类型',
-  `source_code` VARCHAR(128) NOT NULL COMMENT '源配置编码',
-  `source_version` INT NOT NULL,
-  `target_type` VARCHAR(32) NOT NULL COMMENT '目标配置类型',
-  `target_code` VARCHAR(128) NOT NULL COMMENT '目标配置编码',
-  `target_version` INT NOT NULL,
-  `dependency_type` VARCHAR(32) NOT NULL DEFAULT 'reference' COMMENT 'reference/composition/trigger',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `source_type` VARCHAR(20) NOT NULL,
+  `source_id` BIGINT NOT NULL,
+  `source_name` VARCHAR(100),
+  `target_type` VARCHAR(20) NOT NULL,
+  `target_id` BIGINT NOT NULL,
+  `target_name` VARCHAR(100),
+  `dependency_type` VARCHAR(20),
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_dependency` (`tenant_id`, `source_type`, `source_code`, `source_version`, `target_type`, `target_code`, `target_version`),
-  KEY `idx_source` (`source_type`, `source_code`),
-  KEY `idx_target` (`target_type`, `target_code`)
-) ENGINE=InnoDB COMMENT='配置依赖关系图';
+  KEY `idx_tenant_source` (`tenant_id`, `source_type`, `source_id`),
+  KEY `idx_tenant_target` (`tenant_id`, `target_type`, `target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配置依赖关系图';
 
-CREATE TABLE `config_snapshot` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `config_snapshot` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `snapshot_name` VARCHAR(128) NOT NULL COMMENT '快照名称',
-  `snapshot_version` VARCHAR(64) NOT NULL COMMENT '快照版本号',
-  `description` VARCHAR(512) DEFAULT NULL,
-  `full_snapshot` JSON NOT NULL COMMENT '完整系统配置快照',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `snapshot_name` VARCHAR(100) NOT NULL,
+  `snapshot_version` VARCHAR(64) NOT NULL,
+  `description` VARCHAR(500),
+  `full_snapshot` JSON NOT NULL,
+  `created_by` BIGINT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_snapshot_version` (`tenant_id`, `snapshot_version`)
-) ENGINE=InnoDB COMMENT='系统配置快照表(用于回滚)';
+  UNIQUE KEY `uk_snapshot_version` (`tenant_id`, `snapshot_version`),
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置快照表';
 
 -- ============================================================
 -- 8. PROMPT & REPORT TEMPLATES
 -- ============================================================
 
-CREATE TABLE `prompt_template` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `prompt_template` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `prompt_code` VARCHAR(128) NOT NULL COMMENT 'Prompt编码',
-  `prompt_name` VARCHAR(128) NOT NULL COMMENT 'Prompt名称',
-  `version` INT NOT NULL DEFAULT 1,
-  `schema_id` BIGINT DEFAULT NULL COMMENT '关联Schema',
-  `schema_version` INT DEFAULT NULL,
-  `prompt_type` VARCHAR(32) NOT NULL COMMENT 'nl2sql/analysis/report/summary',
-  `system_prompt` TEXT NOT NULL COMMENT '系统Prompt',
-  `user_prompt_template` TEXT NOT NULL COMMENT '用户Prompt模板(支持变量)',
-  `output_schema` JSON DEFAULT NULL COMMENT '输出JSON Schema',
-  `model_config` JSON DEFAULT NULL COMMENT '模型配置(temperature等)',
-  `description` VARCHAR(512) DEFAULT NULL,
-  `status` VARCHAR(16) NOT NULL DEFAULT 'active',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `schema_id` BIGINT,
+  `template_content` TEXT NOT NULL,
+  `variables` JSON,
+  `config` JSON,
+  `version` INT DEFAULT 1,
+  `status` VARCHAR(16) DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_prompt_version` (`tenant_id`, `prompt_code`, `version`)
-) ENGINE=InnoDB COMMENT='Prompt模板表(版本化)';
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Prompt模板表';
 
-CREATE TABLE `report_template` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `report_template` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `template_code` VARCHAR(128) NOT NULL COMMENT '模板编码',
-  `template_name` VARCHAR(128) NOT NULL COMMENT '模板名称',
-  `version` INT NOT NULL DEFAULT 1,
-  `output_format` VARCHAR(16) NOT NULL COMMENT 'word/ppt/pdf',
-  `template_file_path` VARCHAR(512) NOT NULL COMMENT '模板文件路径(MinIO)',
-  `schema_ids` JSON DEFAULT NULL COMMENT '关联Schema ID列表',
-  `kpi_ids` JSON DEFAULT NULL COMMENT '关联KPI ID列表',
-  `prompt_ids` JSON DEFAULT NULL COMMENT '关联Prompt ID列表',
-  `variables` JSON DEFAULT NULL COMMENT '模板变量定义',
-  `description` VARCHAR(512) DEFAULT NULL,
-  `status` VARCHAR(16) NOT NULL DEFAULT 'active',
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `format` VARCHAR(10) NOT NULL,
+  `template_file` VARCHAR(500),
+  `variables` JSON,
+  `config` JSON,
+  `version` INT DEFAULT 1,
+  `status` VARCHAR(16) DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_report_version` (`tenant_id`, `template_code`, `version`)
-) ENGINE=InnoDB COMMENT='报表模板表(版本化)';
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='报表模板表';
 
 -- ============================================================
 -- 9. AI CONTROL & SAFETY ENGINE
 -- ============================================================
 
-CREATE TABLE `ai_policy` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `ai_policy` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `policy_code` VARCHAR(128) NOT NULL COMMENT '策略编码',
-  `policy_name` VARCHAR(128) NOT NULL COMMENT '策略名称',
-  `policy_type` VARCHAR(32) NOT NULL COMMENT 'global/tenant/user/workflow',
-  `rules` JSON NOT NULL COMMENT '策略规则',
-  `description` VARCHAR(512) DEFAULT NULL,
-  `status` TINYINT NOT NULL DEFAULT 1,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500),
+  `allow_sql_generation` TINYINT DEFAULT 1,
+  `allow_cross_dataset_join` TINYINT DEFAULT 0,
+  `allow_data_modification` TINYINT DEFAULT 0,
+  `max_rows_returned` INT DEFAULT 1000,
+  `max_execution_time` INT DEFAULT 30,
+  `allowed_datasets` JSON,
+  `blocked_tables` JSON,
+  `config` JSON,
+  `status` INT DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_policy_code` (`tenant_id`, `policy_code`)
-) ENGINE=InnoDB COMMENT='AI策略表';
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI策略表';
 
-CREATE TABLE `ai_execution_trace` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `ai_execution_trace` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `trace_id` VARCHAR(64) NOT NULL COMMENT '追踪ID',
-  `run_id` VARCHAR(64) DEFAULT NULL COMMENT '关联工作流运行ID',
-  `node_id` VARCHAR(128) DEFAULT NULL,
-  `ai_task_type` VARCHAR(32) NOT NULL COMMENT 'nl2sql/analysis/report',
-  `input_prompt` TEXT NOT NULL COMMENT '输入Prompt',
+  `trace_id` VARCHAR(64) NOT NULL,
+  `run_id` VARCHAR(64),
+  `node_id` VARCHAR(128),
+  `ai_task_type` VARCHAR(32),
+  `input_prompt` TEXT,
   `prompt_tokens` INT DEFAULT 0,
   `completion_tokens` INT DEFAULT 0,
   `total_tokens` INT DEFAULT 0,
-  `model_name` VARCHAR(64) DEFAULT NULL COMMENT '使用的模型',
-  `model_config` JSON DEFAULT NULL COMMENT '模型参数',
-  `raw_output` TEXT DEFAULT NULL COMMENT '原始输出',
-  `validated_output` TEXT DEFAULT NULL COMMENT '验证后输出',
-  `validation_passed` TINYINT DEFAULT NULL COMMENT '验证是否通过',
-  `validation_errors` JSON DEFAULT NULL COMMENT '验证错误详情',
+  `model_name` VARCHAR(64),
+  `model_config` JSON,
+  `raw_output` TEXT,
+  `validated_output` TEXT,
+  `validation_passed` TINYINT,
+  `validation_errors` JSON,
   `retry_count` INT DEFAULT 0,
-  `latency_ms` BIGINT DEFAULT NULL COMMENT '响应延迟(毫秒)',
-  `cost` DECIMAL(10,6) DEFAULT 0 COMMENT '本次调用成本',
-  `status` VARCHAR(16) NOT NULL DEFAULT 'pending' COMMENT 'pending/success/failed/validated',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `latency_ms` BIGINT,
+  `cost` DECIMAL(10,6) DEFAULT 0,
+  `status` VARCHAR(16) DEFAULT 'pending',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_trace_id` (`trace_id`),
-  KEY `idx_tenant_run` (`tenant_id`, `run_id`),
-  KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB COMMENT='AI执行追踪表';
+  KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI执行追踪表';
 
-CREATE TABLE `ai_sql_validation_log` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `trace_id` VARCHAR(64) NOT NULL,
-  `original_sql` TEXT NOT NULL COMMENT 'AI生成的原始SQL',
-  `parsed_ast` JSON DEFAULT NULL COMMENT '解析后的AST',
-  `validation_result` VARCHAR(16) NOT NULL COMMENT 'pass/fail',
-  `validation_errors` JSON DEFAULT NULL COMMENT '校验错误',
-  `corrected_sql` TEXT DEFAULT NULL COMMENT '修正后的SQL',
-  `columns_referenced` JSON DEFAULT NULL COMMENT '引用的列',
-  `tables_referenced` JSON DEFAULT NULL COMMENT '引用的表',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS `ai_sql_validation_log` (
+  `id` BIGINT NOT NULL,
+  `tenant_id` BIGINT,
+  `trace_id` VARCHAR(64),
+  `original_sql` TEXT,
+  `validated_sql` TEXT,
+  `validation_result` JSON,
+  `security_check` JSON,
+  `status` INT DEFAULT 0,
+  `error_message` TEXT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_trace_id` (`trace_id`)
-) ENGINE=InnoDB COMMENT='AI SQL校验日志表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI SQL校验日志表';
 
 -- ============================================================
 -- 10. OUTPUT ENGINE
 -- ============================================================
 
-CREATE TABLE `report_output` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `report_output` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `report_name` VARCHAR(128) NOT NULL COMMENT '报表名称',
-  `template_id` BIGINT DEFAULT NULL COMMENT '使用的模板ID',
-  `run_id` VARCHAR(64) DEFAULT NULL COMMENT '关联工作流运行ID',
-  `output_format` VARCHAR(16) NOT NULL COMMENT 'word/ppt/pdf',
-  `file_path` VARCHAR(512) NOT NULL COMMENT '文件路径(MinIO)',
-  `file_size` BIGINT DEFAULT 0,
-  `status` VARCHAR(16) NOT NULL DEFAULT 'generating' COMMENT 'generating/ready/failed/expired',
-  `generated_at` DATETIME DEFAULT NULL,
-  `expires_at` DATETIME DEFAULT NULL COMMENT '过期时间',
-  `download_count` INT DEFAULT 0,
-  `created_by` BIGINT DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `workflow_run_id` BIGINT,
+  `report_template_id` BIGINT,
+  `name` VARCHAR(200) NOT NULL,
+  `format` VARCHAR(10) NOT NULL,
+  `file_key` VARCHAR(500),
+  `file_name` VARCHAR(200),
+  `file_size` BIGINT,
+  `file_path` VARCHAR(500),
+  `status` INT DEFAULT 1,
+  `error_message` TEXT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `deleted` INT DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_tenant_id` (`tenant_id`),
-  KEY `idx_run_id` (`run_id`)
-) ENGINE=InnoDB COMMENT='报表输出表';
+  KEY `idx_workflow_run_id` (`workflow_run_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='报表输出表';
 
 -- ============================================================
--- 11. SYSTEM AUDIT
+-- 11. NOTIFICATIONS
 -- ============================================================
 
--- ============================================================
--- 12. NOTIFICATIONS
--- ============================================================
-
-CREATE TABLE `notification` (
+CREATE TABLE IF NOT EXISTS `notification` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `tenant_id` BIGINT NOT NULL,
-  `user_id` BIGINT NOT NULL COMMENT '接收用户ID',
-  `type` VARCHAR(16) NOT NULL COMMENT 'success/error/warning/info',
-  `title` VARCHAR(256) DEFAULT NULL COMMENT '通知标题',
-  `message` TEXT NOT NULL COMMENT '通知内容',
-  `link` VARCHAR(512) DEFAULT NULL COMMENT '关联链接',
-  `is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '0=未读 1=已读',
-  `source_type` VARCHAR(32) DEFAULT NULL COMMENT '来源类型: workflow/report/system',
-  `source_id` VARCHAR(64) DEFAULT NULL COMMENT '来源ID',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `user_id` BIGINT NOT NULL,
+  `type` VARCHAR(16) NOT NULL,
+  `title` VARCHAR(256),
+  `message` TEXT NOT NULL,
+  `link` VARCHAR(512),
+  `is_read` TINYINT DEFAULT 0,
+  `source_type` VARCHAR(32),
+  `source_id` VARCHAR(64),
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_tenant_user` (`tenant_id`, `user_id`),
-  KEY `idx_is_read` (`is_read`),
-  KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB COMMENT='通知表';
+  KEY `idx_is_read` (`is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
 
 -- ============================================================
--- 13. SYSTEM SETTINGS
+-- 12. SYSTEM SETTINGS
 -- ============================================================
 
-CREATE TABLE `system_setting` (
+CREATE TABLE IF NOT EXISTS `system_setting` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `tenant_id` BIGINT NOT NULL,
-  `setting_group` VARCHAR(32) NOT NULL COMMENT '设置组: appearance/ai/notification/security/advanced',
-  `setting_key` VARCHAR(128) NOT NULL COMMENT '设置键',
-  `setting_value` JSON DEFAULT NULL COMMENT '设置值',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `setting_group` VARCHAR(32) NOT NULL,
+  `setting_key` VARCHAR(128) NOT NULL,
+  `setting_value` JSON,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_tenant_group_key` (`tenant_id`, `setting_group`, `setting_key`),
   KEY `idx_tenant_group` (`tenant_id`, `setting_group`)
-) ENGINE=InnoDB COMMENT='系统设置表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统设置表';
 
 -- ============================================================
--- 14. SYSTEM AUDIT (continued)
+-- 13. AUDIT LOG
 -- ============================================================
 
-CREATE TABLE `audit_log` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `audit_log` (
+  `id` BIGINT NOT NULL,
   `tenant_id` BIGINT NOT NULL,
-  `user_id` BIGINT DEFAULT NULL,
-  `username` VARCHAR(64) DEFAULT NULL,
-  `action` VARCHAR(64) NOT NULL COMMENT '操作类型',
-  `resource_type` VARCHAR(64) NOT NULL COMMENT '资源类型',
-  `resource_id` VARCHAR(128) DEFAULT NULL COMMENT '资源ID',
-  `old_value` JSON DEFAULT NULL COMMENT '旧值',
-  `new_value` JSON DEFAULT NULL COMMENT '新值',
-  `ip_address` VARCHAR(64) DEFAULT NULL,
-  `user_agent` VARCHAR(256) DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `user_id` BIGINT,
+  `username` VARCHAR(50),
+  `action` VARCHAR(50) NOT NULL,
+  `resource_type` VARCHAR(50),
+  `resource_id` BIGINT,
+  `resource_name` VARCHAR(200),
+  `details` TEXT,
+  `ip_address` VARCHAR(50),
+  `user_agent` VARCHAR(500),
+  `status` INT DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_tenant_user` (`tenant_id`, `user_id`),
-  KEY `idx_action` (`action`),
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_user_id` (`user_id`),
   KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB COMMENT='审计日志表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审计日志表';
 
 -- ============================================================
--- 12. DEMO DATA
+-- 14. DEMO DATA
 -- ============================================================
 
 -- Default tenant
-INSERT INTO `tenant` (`tenant_code`, `tenant_name`, `contact_name`, `contact_email`, `plan_type`, `max_users`, `max_datasets`, `max_ai_calls_per_day`)
-VALUES ('default', '默认租户', 'Admin', 'admin@enterprise.com', 'enterprise', 100, 500, 10000);
+INSERT INTO `tenant` (`id`, `name`, `code`, `contact_name`, `contact_email`, `status`, `max_users`, `max_datasources`)
+VALUES (1, '默认租户', 'default', 'Admin', 'admin@enterprise.com', 1, 100, 500);
 
 -- Default roles
-INSERT INTO `sys_role` (`tenant_id`, `role_code`, `role_name`, `description`, `is_system`) VALUES
-(1, 'SUPER_ADMIN', '超级管理员', '系统超级管理员', 1),
-(1, 'TENANT_ADMIN', '租户管理员', '租户管理员', 1),
-(1, 'DATA_ANALYST', '数据分析师', '数据分析师', 0),
-(1, 'REPORT_VIEWER', '报表查看者', '只读用户', 0);
+INSERT INTO `sys_role` (`id`, `tenant_id`, `role_code`, `role_name`, `description`, `is_system`, `status`) VALUES
+(1, 1, 'SUPER_ADMIN', '超级管理员', '系统超级管理员', 1, 1),
+(2, 1, 'TENANT_ADMIN', '租户管理员', '租户管理员', 1, 1),
+(3, 1, 'DATA_ANALYST', '数据分析师', '数据分析师', 0, 1),
+(4, 1, 'REPORT_VIEWER', '报表查看者', '只读用户', 0, 1);
 
 -- Default admin user (password: admin123 BCrypt encoded)
-INSERT INTO `sys_user` (`tenant_id`, `username`, `password`, `real_name`, `email`) VALUES
-(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '系统管理员', 'admin@enterprise.com');
+INSERT INTO `sys_user` (`id`, `tenant_id`, `username`, `password`, `real_name`, `email`, `status`) VALUES
+(1, 1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '系统管理员', 'admin@enterprise.com', 1);
 
-INSERT INTO `sys_user_role` (`user_id`, `role_id`) VALUES (1, 1);
+INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`) VALUES (1, 1, 1);
+
+-- Default permissions
+INSERT INTO `sys_permission` (`id`, `parent_id`, `perm_code`, `perm_name`, `perm_type`, `sort_order`, `status`) VALUES
+(1, 0, 'user:manage', '用户管理', 'menu', 1, 1),
+(2, 0, 'config:manage', '配置管理', 'menu', 2, 1),
+(3, 0, 'workflow:execute', '工作流执行', 'menu', 3, 1),
+(4, 0, 'data:manage', '数据管理', 'menu', 4, 1),
+(5, 0, 'ai:use', 'AI功能使用', 'menu', 5, 1),
+(6, 0, 'report:view', '报表查看', 'menu', 6, 1),
+(7, 0, 'audit:view', '审计查看', 'menu', 7, 1);
+
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`) VALUES
+(1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), (5, 1, 5), (6, 1, 6), (7, 1, 7);
 
 -- Default AI policy
-INSERT INTO `ai_policy` (`tenant_id`, `policy_code`, `policy_name`, `policy_type`, `rules`, `description`) VALUES
-(1, 'default_policy', '默认AI策略', 'tenant', '{"allow_sql_generation": true, "allow_schema_access": true, "allow_cross_dataset_join": false, "max_sql_complexity": 10, "allowed_sql_types": ["SELECT"], "require_where_clause": true, "max_result_rows": 10000}', '默认租户AI策略');
+INSERT INTO `ai_policy` (`id`, `tenant_id`, `name`, `description`, `allow_sql_generation`, `allow_cross_dataset_join`, `allow_data_modification`, `max_rows_returned`, `max_execution_time`, `status`) VALUES
+(1, 1, '默认AI策略', '默认租户AI策略', 1, 0, 0, 10000, 60, 1);
