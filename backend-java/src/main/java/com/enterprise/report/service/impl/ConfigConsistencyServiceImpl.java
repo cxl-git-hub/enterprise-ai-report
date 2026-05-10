@@ -375,7 +375,7 @@ public class ConfigConsistencyServiceImpl implements ConfigConsistencyService {
     @Transactional
     public void importConfig(Long tenantId, String json, boolean merge) {
         try {
-            Map<String, List<?>> data = objectMapper.readValue(json, new TypeReference<Map<String, List<?>>() {});
+            Map<String, List<?>> data = objectMapper.readValue(json, new TypeReference<Map<String, List<?>>>() {});
 
             if (!merge) {
                 // Full replace: delete existing configs first

@@ -280,6 +280,7 @@ function handleGlobalSearch(value: string) {
   z-index: 10;
   overflow-y: auto;
   overflow-x: hidden;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
 }
 
 .logo {
@@ -287,32 +288,38 @@ function handleGlobalSearch(value: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
   .logo-icon {
-    font-size: 24px;
-    color: #1677ff;
+    font-size: 26px;
+    color: #7c6aef;
+    filter: drop-shadow(0 2px 4px rgba(124, 106, 239, 0.4));
   }
 
   .logo-text {
     font-size: 18px;
     font-weight: 700;
     color: #fff;
+    letter-spacing: -0.5px;
   }
 }
 
 .main-header {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   position: sticky;
   top: 0;
   z-index: 5;
   transition: margin-left 0.2s;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .header-left {

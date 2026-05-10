@@ -78,6 +78,9 @@ public class AuthController {
         if (profile.containsKey("displayName")) {
             user.setRealName((String) profile.get("displayName"));
         }
+        if (profile.containsKey("realName")) {
+            user.setRealName((String) profile.get("realName"));
+        }
         if (profile.containsKey("email")) {
             user.setEmail((String) profile.get("email"));
         }

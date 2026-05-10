@@ -113,11 +113,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .collect(Collectors.toList());
             if (roleIds.isEmpty()) return new ArrayList<>();
 
-            return rolePermissionMapper.selectList(
+            List<Long> permissionIds = rolePermissionMapper.selectList(
                     new LambdaQueryWrapper<com.enterprise.report.entity.SysRolePermission>()
                             .in(com.enterprise.report.entity.SysRolePermission::getRoleId, roleIds))
                     .stream()
-                    .map(rp -> String.valueOf(rp.getPermissionId()))
+                    .map(com.enterprise.report.entity.SysRolePermission::getPermissionId)
+                    .collect(Collectors.toList());
+            if (permissionIds.isEmpty()) return new ArrayList<>();
+
+            return permissionMapper.selectBatchIds(permissionIds).stream()
+                    .map(SysPermission::getPermCode)
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("Failed to load user permissions: {}", e.getMessage());

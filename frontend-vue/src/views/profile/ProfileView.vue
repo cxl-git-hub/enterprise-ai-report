@@ -53,7 +53,7 @@
           >
             <a-row :gutter="16">
               <a-col :span="12">
-                <a-form-item label="显示名称" name="displayName">
+                <a-form-item label="显示名称" name="realName">
                   <a-input v-model:value="profileForm.realName" placeholder="请输入显示名称" />
                 </a-form-item>
               </a-col>
@@ -212,7 +212,7 @@ const myStats = reactive({
 })
 
 const profileRules = {
-  displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
+  realName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email' as const, message: '请输入有效邮箱', trigger: 'blur' },

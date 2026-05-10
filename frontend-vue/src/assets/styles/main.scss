@@ -121,15 +121,32 @@ html, body {
 .page-container {
   padding: 24px;
   min-height: calc(100vh - #{$header-height} - 48px);
+  animation: pageEnter 0.3s ease-out;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // Card styles
 .page-card {
   background: #fff;
-  border-radius: $border-radius;
-  box-shadow: $box-shadow;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.02);
   padding: 24px;
   margin-bottom: 16px;
+  transition: box-shadow 0.3s;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  }
 }
 
 // Table actions

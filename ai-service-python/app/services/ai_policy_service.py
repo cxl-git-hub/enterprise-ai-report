@@ -42,9 +42,16 @@ class AIPolicyService:
         rules = self._parse_rules(policy)
         return rules.get(rule_name, True)
 
-    async def check_sql_generation_allowed(self, tenant_id: int) -> bool:
+    async def check_sql_generation_allowed(self, tenant_id: int) -> tuple[bool, str]:
         """Check if SQL generation is allowed for the tenant."""
-        return await self.is_allowed(tenant_id, "allow_sql_generation")
+        policy = await self.get_active_policy(tenant_id)
+        if not policy:
+            return True, "No policy configured, defaulting to allow"
+        rules = self._parse_rules(policy)
+        allowed = rules.get("allow_sql_generation", True)
+        if not allowed:
+            return False, "SQL generation is not allowed by tenant AI policy"
+        return True, "SQL generation allowed by policy"
 
     async def check_schema_access_allowed(self, tenant_id: int) -> bool:
         """Check if schema access is allowed for the tenant."""

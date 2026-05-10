@@ -13,13 +13,14 @@
 
     <a-row :gutter="16" class="stat-row">
       <a-col :xs="12" :sm="12" :md="6" v-for="(item, idx) in statItems" :key="idx">
-        <div class="stat-card">
+        <div class="stat-card" :style="{ '--accent': item.color, '--accent-bg': item.bg }">
           <a-spin :spinning="statsLoading">
             <div class="stat-icon" :style="{ background: item.bg, color: item.color }">
               <component :is="item.icon" />
             </div>
             <div class="stat-value">{{ item.value }}</div>
             <div class="stat-label">{{ item.label }}</div>
+            <div class="stat-accent-bar" :style="{ background: item.color }"></div>
           </a-spin>
         </div>
       </a-col>
@@ -270,16 +271,34 @@ onUnmounted(() => {
 
 .stat-card {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 20px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   min-height: 120px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent, #1677ff);
+  }
+
+  .stat-accent-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+
+  &:hover .stat-accent-bar {
+    opacity: 1;
   }
 
   :deep(.ant-spin-nested-loading) {
@@ -301,12 +320,18 @@ onUnmounted(() => {
     justify-content: center;
     font-size: 24px;
     margin: 0 auto 12px;
+    transition: transform 0.3s;
+  }
+
+  &:hover .stat-icon {
+    transform: scale(1.1);
   }
 
   .stat-value {
     font-size: 28px;
     font-weight: 700;
     color: #1a1a1a;
+    font-variant-numeric: tabular-nums;
   }
 
   .stat-label {
