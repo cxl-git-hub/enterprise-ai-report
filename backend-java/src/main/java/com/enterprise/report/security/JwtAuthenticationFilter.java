@@ -2,9 +2,11 @@ package com.enterprise.report.security;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.enterprise.report.entity.SysRole;
+import com.enterprise.report.entity.SysPermission;
 import com.enterprise.report.mapper.SysRoleMapper;
 import com.enterprise.report.mapper.SysRolePermissionMapper;
 import com.enterprise.report.mapper.SysUserRoleMapper;
+import com.enterprise.report.mapper.SysPermissionMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
     private final SysRolePermissionMapper rolePermissionMapper;
+    private final SysPermissionMapper permissionMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,

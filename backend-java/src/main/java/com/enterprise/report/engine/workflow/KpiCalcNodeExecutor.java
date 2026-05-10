@@ -41,7 +41,11 @@ public class KpiCalcNodeExecutor implements NodeExecutor {
             }
             params.putAll(context);
 
-            Long kpiId = ((Number) params.get("kpiId")).longValue();
+            Object kpiIdObj = params.get("kpiId");
+            if (kpiIdObj == null) {
+                throw new IllegalArgumentException("kpiId is required for kpi_calc node");
+            }
+            Long kpiId = ((Number) kpiIdObj).longValue();
             KpiExecuteRequest request = new KpiExecuteRequest();
             request.setKpiId(kpiId);
             request.setParameters(params);

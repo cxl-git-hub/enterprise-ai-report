@@ -46,8 +46,8 @@ public class AiAnalysisNodeExecutor implements NodeExecutor {
 
         AiExecutionTrace trace = new AiExecutionTrace();
         trace.setTenantId(tenantId);
-        trace.setOperationType("workflow_analysis");
-        trace.setStatus(0);
+        trace.setAiTaskType("workflow_analysis");
+        trace.setStatus("pending");
 
         try {
             if (!aiPolicyService.checkSqlGenerationAllowed(tenantId)) {
@@ -73,8 +73,8 @@ public class AiAnalysisNodeExecutor implements NodeExecutor {
                     request,
                     String.class);
 
-            trace.setAiResponse(response.getBody());
-            trace.setStatus(1);
+            trace.setRawOutput(response.getBody());
+            trace.setStatus("success");
 
             nodeRun.setOutputResult(response.getBody());
             nodeRun.setState(WorkflowState.SUCCESS);
@@ -83,14 +83,16 @@ public class AiAnalysisNodeExecutor implements NodeExecutor {
             log.error("AI analysis node failed: {}", e.getMessage());
             nodeRun.setState(WorkflowState.FAILED);
             nodeRun.setErrorMessage(e.getMessage());
-            trace.setErrorMessage(e.getMessage());
-            trace.setStatus(-1);
+            trace.setRawOutput("ERROR: " + e.getMessage());
+            trace.setStatus("failed");
         } finally {
             nodeRun.setFinishedAt(LocalDateTime.now());
             if (nodeRun.getStartedAt() != null) {
                 nodeRun.setDurationMs(java.time.Duration.between(nodeRun.getStartedAt(), nodeRun.getFinishedAt()).toMillis());
             }
-            trace.setDurationMs(nodeRun.getDurationMs());
+            trace.setLatencyMs(nodeRun.getDurationMs());
+            trace.setTotalTokens(0);
+            trace.setCost(java.math.BigDecimal.ZERO);
             traceMapper.insert(trace);
         }
     }

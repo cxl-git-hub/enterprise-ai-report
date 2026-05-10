@@ -7,8 +7,8 @@ spring:
   application:
     name: ai-report-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/ai_report?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
+    url: jdbc:mysql://localhost:3306/ai_report?useUnicode=true&characterEncoding=utf8mb4&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USER:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -66,9 +66,9 @@ minio:
 ai:
   service:
     url: ${AI_SERVICE_URL:http://localhost:8081}
-    timeout: 60000
+    timeout: ${AI_SERVICE_TIMEOUT:60000}
 
 logging:
   level:
-    com.enterprise.report: DEBUG
-    com.baomidou.mybatisplus: DEBUG
+    com.enterprise.report: ${LOG_LEVEL:DEBUG}
+    com.baomidou.mybatisplus: ${LOG_LEVEL:DEBUG}

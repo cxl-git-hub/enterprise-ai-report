@@ -44,11 +44,25 @@ public class KpiDslEvaluator {
         Matcher matcher = FUNC_PATTERN.matcher(expression);
         if (matcher.find()) {
             String func = matcher.group(1).toUpperCase();
-            String dataset = matcher.group(2);
+            String column = matcher.group(2);
             String where = matcher.group(3);
 
-            Long targetDatasetId = resolveDatasetId(dataset, datasetId);
-            return executeAggregation(func, targetDatasetId, where, params);
+            Long targetDatasetId = resolveDatasetId(column, datasetId);
+            // If column is a dataset name, use *; otherwise use the column name
+            String aggColumn = "*";
+            try {
+                Long.parseLong(column);
+                // It's a dataset ID, use *
+            } catch (NumberFormatException e) {
+                // Check if it's a column name (not a dataset name)
+                Dataset ds = datasetMapper.selectOne(
+                        new LambdaQueryWrapper<Dataset>().eq(Dataset::getName, column));
+                if (ds == null) {
+                    // It's a column name
+                    aggColumn = column;
+                }
+            }
+            return executeAggregation(func, targetDatasetId, aggColumn, where, params);
         }
 
         try {
@@ -90,10 +104,20 @@ public class KpiDslEvaluator {
         Matcher matcher = FUNC_PATTERN.matcher(part);
         if (matcher.find()) {
             String func = matcher.group(1).toUpperCase();
-            String dataset = matcher.group(2);
+            String column = matcher.group(2);
             String where = matcher.group(3);
-            Long targetDatasetId = resolveDatasetId(dataset, datasetId);
-            return executeAggregation(func, targetDatasetId, where, params);
+            Long targetDatasetId = resolveDatasetId(column, datasetId);
+            String aggColumn = "*";
+            try {
+                Long.parseLong(column);
+            } catch (NumberFormatException e) {
+                Dataset ds = datasetMapper.selectOne(
+                        new LambdaQueryWrapper<Dataset>().eq(Dataset::getName, column));
+                if (ds == null) {
+                    aggColumn = column;
+                }
+            }
+            return executeAggregation(func, targetDatasetId, aggColumn, where, params);
         }
         try {
             return new BigDecimal(part);
@@ -130,7 +154,7 @@ public class KpiDslEvaluator {
         }
     }
 
-    private BigDecimal executeAggregation(String func, Long datasetId, String where, Map<String, Object> params) {
+    private BigDecimal executeAggregation(String func, Long datasetId, String aggColumn, String where, Map<String, Object> params) {
         Dataset dataset = datasetMapper.selectById(datasetId);
         if (dataset == null) {
             throw new BusinessException(404, "Dataset not found: " + datasetId);
@@ -150,8 +174,12 @@ public class KpiDslEvaluator {
         if (!func.matches("^(COUNT|SUM|AVG|MIN|MAX)$")) {
             throw new BusinessException(400, "Invalid aggregation function: " + func);
         }
+        // Validate column name to prevent injection
+        if (!aggColumn.equals("*") && !aggColumn.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+            throw new BusinessException(400, "Invalid column name: " + aggColumn);
+        }
         String whereClause = where != null ? " WHERE " + replaceParams(where, params) : "";
-        String sql = "SELECT " + func + "(*) FROM " + tableName + whereClause;
+        String sql = "SELECT " + func + "(" + aggColumn + ") FROM " + tableName + whereClause;
 
         log.debug("Executing KPI SQL: {}", sql);
 
