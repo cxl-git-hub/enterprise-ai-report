@@ -119,6 +119,7 @@ import ConfirmDelete from '@/components/common/ConfirmDelete.vue'
 import { useTable } from '@/composables/useTable'
 import { useModal } from '@/composables/useModal'
 import { reportTemplateApi, type ReportTemplate, type ReportTemplateForm } from '@/api/report-template'
+import { post } from '@/api/request'
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
@@ -174,7 +175,28 @@ async function openEditModal(record: ReportTemplate) {
 }
 
 function aiSuggestTemplate() {
-  message.info('AI生成功能需要连接后端AI服务')
+  if (!formState.name) {
+    message.warning('请先输入模板名称')
+    return
+  }
+  message.loading({ content: 'AI正在生成报表模板...', key: 'ai-generate', duration: 0 })
+  post<{ data: { templateContent: string; sections: Array<{ name: string; description: string }> } }>('/ai/generate-report-template', {
+    name: formState.name,
+    description: formState.description,
+    format: formState.format,
+  }).then((res) => {
+    if (res?.data?.templateContent) {
+      formState.templateContent = res.data.templateContent
+      if (res.data.sections?.length) {
+        formState.sections = res.data.sections
+      }
+      message.success({ content: 'AI已生成报表模板', key: 'ai-generate' })
+    } else {
+      message.info({ content: 'AI未能生成模板，请手动编写', key: 'ai-generate' })
+    }
+  }).catch(() => {
+    message.error({ content: 'AI生成服务暂时不可用', key: 'ai-generate' })
+  })
 }
 
 async function handleSubmit() {

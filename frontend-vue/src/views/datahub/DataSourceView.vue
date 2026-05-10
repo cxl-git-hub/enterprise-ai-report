@@ -2,9 +2,14 @@
   <div class="page-container">
     <PageHeader title="数据源管理" subtitle="管理数据库连接">
       <template #actions>
-        <a-button type="primary" @click="openCreateModal">
-          <PlusOutlined /> 新建数据源
-        </a-button>
+        <a-space>
+          <a-button type="primary" @click="openCreateModal">
+            <PlusOutlined /> 新建数据源
+          </a-button>
+          <a-button @click="openUploadModal">
+            <UploadOutlined /> 上传文件
+          </a-button>
+        </a-space>
       </template>
     </PageHeader>
 
@@ -32,6 +37,9 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'type'">
             <a-tag :color="typeColorMap[record.type] || 'default'">{{ record.type }}</a-tag>
+          </template>
+          <template v-if="column.key === 'password'">
+            <span style="color: #999">••••••••</span>
           </template>
           <template v-if="column.key === 'status'">
             <a-badge
@@ -114,22 +122,62 @@
         </a-form-item>
       </a-form>
     </a-modal>
+    <!-- File Upload Modal -->
+    <a-modal
+      v-model:open="uploadModalVisible"
+      title="上传数据文件"
+      :confirm-loading="uploading"
+      @ok="handleUpload"
+      width="500px"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="数据源名称" required>
+          <a-input v-model:value="uploadForm.name" placeholder="请输入数据源名称" />
+          <div class="field-hint">示例：2024年Q1销售数据</div>
+        </a-form-item>
+        <a-form-item label="描述">
+          <a-textarea v-model:value="uploadForm.description" :rows="2" placeholder="请输入描述" />
+        </a-form-item>
+        <a-form-item label="上传文件" required>
+          <a-upload-dragger
+            v-model:file-list="uploadForm.fileList"
+            :before-upload="beforeUpload"
+            :max-count="1"
+            accept=".xlsx,.xls,.csv,.json"
+          >
+            <p class="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
+            <p class="ant-upload-hint">支持 Excel (.xlsx/.xls)、CSV、JSON 格式</p>
+          </a-upload-dragger>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, SearchOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmDelete from '@/components/common/ConfirmDelete.vue'
 import { useTable } from '@/composables/useTable'
 import { useModal } from '@/composables/useModal'
 import { datasourceApi, type DataSource, type DataSourceForm } from '@/api/datasource'
+import { post } from '@/api/request'
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
 const testingId = ref<string | null>(null)
+const uploadModalVisible = ref(false)
+const uploading = ref(false)
+const uploadForm = reactive({
+  name: '',
+  description: '',
+  fileList: [] as any[],
+})
 
 const typeColorMap: Record<string, string> = {
   mysql: 'blue',
@@ -171,6 +219,7 @@ const columns = [
   { title: '主机', dataIndex: 'host', key: 'host' },
   { title: '端口', dataIndex: 'port', key: 'port', width: 80 },
   { title: '数据库', dataIndex: 'database', key: 'database' },
+  { title: '密码', dataIndex: 'password', key: 'password', width: 100 },
   { title: '连接状态', dataIndex: 'status', key: 'status', width: 120 },
   { title: '最后测试', dataIndex: 'lastTestAt', key: 'lastTestAt', width: 180 },
   { title: '操作', key: 'action', width: 240, fixed: 'right' as const },
@@ -223,6 +272,56 @@ async function handleDelete(id: string) {
     message.success('删除成功')
     fetchData()
   } catch {}
+}
+
+function openUploadModal() {
+  uploadForm.name = ''
+  uploadForm.description = ''
+  uploadForm.fileList = []
+  uploadModalVisible.value = true
+}
+
+function beforeUpload(file: File) {
+  const validTypes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv',
+    'application/json',
+  ]
+  const isValid = validTypes.includes(file.type) || file.name.match(/\.(xlsx|xls|csv|json)$/i)
+  if (!isValid) {
+    message.error('只支持 Excel、CSV、JSON 格式的文件')
+    return false
+  }
+  return false // Prevent auto upload, handle manually
+}
+
+async function handleUpload() {
+  if (!uploadForm.name) {
+    message.error('请输入数据源名称')
+    return
+  }
+  if (uploadForm.fileList.length === 0) {
+    message.error('请选择要上传的文件')
+    return
+  }
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('name', uploadForm.name)
+    formData.append('description', uploadForm.description)
+    formData.append('file', uploadForm.fileList[0].originFileObj || uploadForm.fileList[0])
+    await post('/datasources/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    message.success('文件上传成功，正在解析数据...')
+    uploadModalVisible.value = false
+    fetchData()
+  } catch {
+    message.error('文件上传失败')
+  } finally {
+    uploading.value = false
+  }
 }
 </script>
 

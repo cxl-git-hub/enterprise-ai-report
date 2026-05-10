@@ -13,6 +13,18 @@
           layout="vertical"
           @finish="handleLogin"
         >
+          <a-form-item label="租户" name="tenantId">
+            <a-select
+              v-model:value="formState.tenantId"
+              size="large"
+              placeholder="请选择租户"
+              :loading="tenantsLoading"
+            >
+              <a-select-option v-for="t in tenants" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
           <a-form-item label="用户名" name="username">
             <a-input
               v-model:value="formState.username"
@@ -32,6 +44,10 @@
             </a-input-password>
           </a-form-item>
           <a-form-item>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+              <a-checkbox v-model:checked="formState.remember">记住我</a-checkbox>
+              <a type="link" style="font-size: 13px">忘记密码？</a>
+            </div>
             <a-button
               type="primary"
               html-type="submit"
@@ -49,23 +65,36 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { UserOutlined, LockOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import BasicLayout from '@/layouts/BasicLayout.vue'
 import { useAuthStore } from '@/stores/auth'
+import { get } from '@/api/request'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
+interface Tenant {
+  id: string
+  name: string
+  code: string
+}
+
+const tenants = ref<Tenant[]>([])
+const tenantsLoading = ref(false)
+
 const formState = reactive({
   username: '',
   password: '',
+  tenantId: undefined as string | undefined,
+  remember: false,
 })
 
 const rules = {
+  tenantId: [{ required: true, message: '请选择租户', trigger: 'change' }],
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -73,9 +102,34 @@ const rules = {
   ],
 }
 
+async function loadTenants() {
+  tenantsLoading.value = true
+  try {
+    const res = await get<{ data: { items: Tenant[] } }>('/tenants', { page: 1, pageSize: 100 })
+    tenants.value = res?.data?.items ?? []
+    // Auto-select first tenant if only one
+    if (tenants.value.length === 1) {
+      formState.tenantId = tenants.value[0].id
+    }
+  } catch {
+    // Fallback: allow login without tenant selection
+    tenants.value = []
+  } finally {
+    tenantsLoading.value = false
+  }
+}
+
 async function handleLogin() {
   try {
     await authStore.login(formState.username, formState.password)
+    if (formState.tenantId) {
+      localStorage.setItem('tenantId', String(formState.tenantId))
+    }
+    if (formState.remember) {
+      localStorage.setItem('rememberedUser', formState.username)
+    } else {
+      localStorage.removeItem('rememberedUser')
+    }
     message.success('登录成功')
     const redirect = (route.query.redirect as string) || '/dashboard'
     router.push(redirect)
@@ -83,6 +137,16 @@ async function handleLogin() {
     // Error handled by interceptor
   }
 }
+
+onMounted(() => {
+  loadTenants()
+  // Restore remembered username
+  const remembered = localStorage.getItem('rememberedUser')
+  if (remembered) {
+    formState.username = remembered
+    formState.remember = true
+  }
+})
 </script>
 
 <style lang="scss" scoped>

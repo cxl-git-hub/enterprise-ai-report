@@ -66,9 +66,64 @@
       </a-row>
 
       <a-row :gutter="16" style="margin-top: 16px" v-if="runDetail">
-        <!-- Execution Timeline -->
+        <!-- Execution Timeline & DAG -->
         <a-col :span="16">
-          <a-card title="执行时间线" :bordered="false" class="page-card">
+          <!-- DAG Topology View -->
+          <a-card title="DAG 拓扑图" :bordered="false" class="page-card">
+            <div class="dag-visualization">
+              <svg :width="dagSvgWidth" height="300" :viewBox="`0 0 ${dagSvgWidth} 300`">
+                <!-- Edges -->
+                <line
+                  v-for="(edge, idx) in dagEdges"
+                  :key="'edge-' + idx"
+                  :x1="getNodePos(edge.from).x"
+                  :y1="getNodePos(edge.from).y"
+                  :x2="getNodePos(edge.to).x"
+                  :y2="getNodePos(edge.to).y"
+                  :stroke="getEdgeColor(edge)"
+                  stroke-width="2"
+                  marker-end="url(#dag-arrow)"
+                />
+                <defs>
+                  <marker id="dag-arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#d9d9d9" />
+                  </marker>
+                </defs>
+                <!-- Nodes -->
+                <g
+                  v-for="node in dagNodes"
+                  :key="node.id"
+                  :transform="`translate(${getNodePos(node.id).x}, ${getNodePos(node.id).y})`"
+                  class="dag-node"
+                  :class="{ 'dag-node-selected': selectedNode?.nodeId === node.id }"
+                  @click="selectDagNode(node)"
+                >
+                  <rect
+                    x="-65"
+                    y="-28"
+                    width="130"
+                    height="56"
+                    rx="10"
+                    :fill="getStatusFill(node.status)"
+                    :stroke="getStatusStroke(node.status)"
+                    stroke-width="2"
+                  />
+                  <text x="0" y="-8" text-anchor="middle" fill="#666" font-size="10">
+                    {{ nodeTypeLabel[node.nodeType] || node.nodeType }}
+                  </text>
+                  <text x="0" y="10" text-anchor="middle" fill="#333" font-size="12" font-weight="600">
+                    {{ truncateText(node.nodeName, 12) }}
+                  </text>
+                  <text x="0" y="23" text-anchor="middle" fill="#999" font-size="9">
+                    {{ formatDuration(node.duration) }}
+                  </text>
+                </g>
+              </svg>
+            </div>
+          </a-card>
+
+          <!-- Execution Timeline -->
+          <a-card title="执行时间线" :bordered="false" class="page-card" style="margin-top: 16px">
             <div class="timeline-container">
               <div
                 v-for="(nodeRun, idx) in runDetail.nodeRuns"
@@ -183,7 +238,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -228,6 +283,79 @@ const statusLabel: Record<string, string> = {
   failed: '失败',
   running: '运行中',
   pending: '等待中',
+}
+
+const nodeTypeLabel: Record<string, string> = {
+  data_fetch: '数据提取',
+  kpi_calc: 'KPI计算',
+  ai_analysis: 'AI分析',
+  report: '报表生成',
+  output: '输出',
+}
+
+// DAG visualization
+interface DagEdgeData { from: string; to: string }
+
+const dagNodes = computed(() => runDetail.value?.nodeRuns || [])
+const dagSvgWidth = computed(() => Math.max(800, dagNodes.value.length * 160))
+
+const dagEdges = computed(() => {
+  // Build edges from node dependencies (inferred from execution order or node metadata)
+  const nodes = runDetail.value?.nodeRuns || []
+  const edges: DagEdgeData[] = []
+  for (let i = 1; i < nodes.length; i++) {
+    // Simple heuristic: connect sequential nodes; in production, use actual DAG definition
+    edges.push({ from: nodes[i - 1].nodeId, to: nodes[i].nodeId })
+  }
+  return edges
+})
+
+const dagNodePositions = computed(() => {
+  const nodes = dagNodes.value
+  const positions: Record<string, { x: number; y: number }> = {}
+  const cols = Math.ceil(Math.sqrt(nodes.length))
+  nodes.forEach((node, idx) => {
+    const col = idx % cols
+    const row = Math.floor(idx / cols)
+    positions[node.nodeId] = {
+      x: 100 + col * (dagSvgWidth.value - 200) / Math.max(cols - 1, 1),
+      y: 80 + row * 140,
+    }
+  })
+  return positions
+})
+
+function getNodePos(nodeId: string) {
+  return dagNodePositions.value[nodeId] || { x: 400, y: 150 }
+}
+
+function getStatusFill(status: string) {
+  const map: Record<string, string> = {
+    success: '#f6ffed',
+    failed: '#fff2f0',
+    running: '#e6f4ff',
+    pending: '#fffbe6',
+  }
+  return map[status] || '#fafafa'
+}
+
+function getStatusStroke(status: string) {
+  return statusColor[status] || '#d9d9d9'
+}
+
+function getEdgeColor(edge: DagEdgeData) {
+  const toNode = dagNodes.value.find((n) => n.nodeId === edge.to)
+  if (toNode?.status === 'success') return '#52c41a'
+  if (toNode?.status === 'failed') return '#ff4d4f'
+  return '#d9d9d9'
+}
+
+function selectDagNode(node: WorkflowNodeRun) {
+  selectedNode.value = node
+}
+
+function truncateText(str: string, len: number) {
+  return str && str.length > len ? str.slice(0, len) + '...' : str
 }
 
 function getStatusBadge(status: string) {
@@ -314,6 +442,29 @@ onMounted(loadRunDetail)
 
   .stat-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
   .stat-label { font-size: 14px; color: #999; margin-top: 4px; }
+}
+
+.dag-visualization {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px;
+}
+
+.dag-node {
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover rect {
+    stroke-width: 3;
+  }
+
+  &.dag-node-selected rect {
+    stroke-width: 3;
+    stroke-dasharray: 5 3;
+  }
 }
 
 .timeline-container {

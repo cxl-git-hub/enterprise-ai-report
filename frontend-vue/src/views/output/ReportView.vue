@@ -15,6 +15,7 @@
             <a-select-option value="excel">Excel</a-select-option>
             <a-select-option value="html">HTML</a-select-option>
             <a-select-option value="docx">Word</a-select-option>
+            <a-select-option value="pptx">PPT</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item>
@@ -78,6 +79,8 @@ const formatColor: Record<string, string> = {
   excel: 'green',
   html: 'blue',
   docx: 'purple',
+  xlsx: 'green',
+  pptx: 'orange',
 }
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =

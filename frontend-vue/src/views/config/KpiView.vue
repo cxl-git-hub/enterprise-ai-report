@@ -180,6 +180,7 @@ import { useTable } from '@/composables/useTable'
 import { useModal } from '@/composables/useModal'
 import { kpiApi, type Kpi, type KpiForm, type KpiVersion, type KpiExecuteResult } from '@/api/kpi'
 import { schemaApi, type Schema } from '@/api/schema'
+import { post } from '@/api/request'
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
@@ -262,7 +263,26 @@ async function handleExecute(record: Kpi) {
 }
 
 function aiSuggestExpression() {
-  message.info('AI建议功能需要连接后端AI服务')
+  if (!formState.name) {
+    message.warning('请先输入KPI名称')
+    return
+  }
+  message.loading({ content: 'AI正在分析并建议表达式...', key: 'ai-suggest', duration: 0 })
+  post<{ data: { expression: string; explanation: string } }>('/ai/suggest-expression', {
+    kpiName: formState.name,
+    description: formState.description,
+    schemaId: formState.schemaId,
+    aggregationType: formState.aggregationType,
+  }).then((res) => {
+    if (res?.data?.expression) {
+      formState.expression = res.data.expression
+      message.success({ content: `AI建议: ${res.data.explanation || '已生成表达式'}`, key: 'ai-suggest' })
+    } else {
+      message.info({ content: 'AI未能生成建议，请手动输入', key: 'ai-suggest' })
+    }
+  }).catch(() => {
+    message.error({ content: 'AI建议服务暂时不可用', key: 'ai-suggest' })
+  })
 }
 
 async function handleSubmit() {

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -35,53 +37,92 @@ public class DagExecutor {
 
         try {
             DagDefinition dag = parseDag(workflow.getDagDefinition());
-            List<String> executionOrder = topologicalSort(dag);
+            Map<String, List<String>> adjacency = buildAdjacency(dag);
+            Map<String, Integer> inDegree = buildInDegree(dag);
+            Map<String, DagNode> nodeMap = dag.getNodes().stream()
+                    .collect(Collectors.toMap(DagNode::getId, n -> n));
 
-            Map<String, Object> context = new HashMap<>();
+            Map<String, Object> context = new ConcurrentHashMap<>();
             if (run.getInputParams() != null) {
                 context.putAll(objectMapper.readValue(run.getInputParams(),
                         new TypeReference<Map<String, Object>>() {}));
             }
 
-            Set<String> completedNodes = new HashSet<>();
-            Set<String> failedNodes = new HashSet<>();
+            Set<String> completedNodes = ConcurrentHashMap.newKeySet();
+            Set<String> failedNodes = ConcurrentHashMap.newKeySet();
+            ExecutorService executorService = Executors.newFixedThreadPool(
+                    Math.min(dag.getNodes().size(), Runtime.getRuntime().availableProcessors()));
 
-            for (String nodeId : executionOrder) {
-                DagNode node = findNode(dag, nodeId);
-                if (node == null) continue;
-
-                WorkflowNodeRun nodeRun = createNodeRun(run, node);
-                nodeRunMapper.insert(nodeRun);
-
-                NodeExecutor executor = getExecutor(node.getType());
-                if (executor == null) {
-                    nodeRun.setState(WorkflowState.FAILED);
-                    nodeRun.setErrorMessage("No executor found for node type: " + node.getType());
-                    nodeRun.setEndTime(LocalDateTime.now());
-                    nodeRunMapper.updateById(nodeRun);
-                    failedNodes.add(nodeId);
-                    throw new BusinessException(500, "No executor for node type: " + node.getType());
-                }
-
-                LocalDateTime nodeStart = LocalDateTime.now();
-                executor.execute(nodeRun, context);
-                LocalDateTime nodeEnd = LocalDateTime.now();
-                nodeRun.setStartTime(nodeStart);
-                nodeRun.setEndTime(nodeEnd);
-                nodeRun.setDurationMs(Duration.between(nodeStart, nodeEnd).toMillis());
-                nodeRunMapper.updateById(nodeRun);
-
-                if (nodeRun.getState() == WorkflowState.SUCCESS) {
-                    completedNodes.add(nodeId);
-                } else {
-                    failedNodes.add(nodeId);
-                    throw new BusinessException(500, "Node '" + nodeId + "' failed: " + nodeRun.getErrorMessage());
-                }
-
-                saveStateSnapshot(run, executionOrder, completedNodes, failedNodes, nodeId);
+            // Level-by-level parallel execution
+            Queue<String> readyQueue = new ConcurrentLinkedQueue<>();
+            for (Map.Entry<String, Integer> entry : inDegree.entrySet()) {
+                if (entry.getValue() == 0) readyQueue.add(entry.getKey());
             }
 
-            run.setState(WorkflowState.SUCCESS);
+            while (!readyQueue.isEmpty()) {
+                List<String> currentLevel = new ArrayList<>(readyQueue);
+                readyQueue.clear();
+
+                // Execute current level in parallel
+                List<CompletableFuture<Void>> futures = currentLevel.stream()
+                        .map(nodeId -> CompletableFuture.runAsync(() -> {
+                            DagNode node = nodeMap.get(nodeId);
+                            if (node == null) return;
+
+                            WorkflowNodeRun nodeRun = createNodeRun(run, node);
+                            nodeRun.setState(WorkflowState.RUNNING);
+                            nodeRun.setStartTime(LocalDateTime.now());
+                            nodeRunMapper.insert(nodeRun);
+
+                            NodeExecutor nodeExecutor = getExecutor(node.getType());
+                            if (nodeExecutor == null) {
+                                nodeRun.setState(WorkflowState.FAILED);
+                                nodeRun.setErrorMessage("No executor for node type: " + node.getType());
+                                nodeRun.setEndTime(LocalDateTime.now());
+                                nodeRunMapper.updateById(nodeRun);
+                                failedNodes.add(nodeId);
+                                return;
+                            }
+
+                            try {
+                                nodeExecutor.execute(nodeRun, context);
+                                nodeRun.setState(WorkflowState.SUCCESS);
+                                completedNodes.add(nodeId);
+                            } catch (Exception e) {
+                                nodeRun.setState(WorkflowState.FAILED);
+                                nodeRun.setErrorMessage(e.getMessage());
+                                failedNodes.add(nodeId);
+                            }
+                            nodeRun.setEndTime(LocalDateTime.now());
+                            nodeRun.setDurationMs(Duration.between(nodeRun.getStartTime(), nodeRun.getEndTime()).toMillis());
+                            nodeRunMapper.updateById(nodeRun);
+                        }, executorService))
+                        .collect(Collectors.toList());
+
+                // Wait for current level to complete
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+                if (!failedNodes.isEmpty()) {
+                    throw new BusinessException(500, "Node failed: " + failedNodes.iterator().next());
+                }
+
+                // Unlock next level
+                for (String completed : completedNodes) {
+                    for (String neighbor : adjacency.getOrDefault(completed, List.of())) {
+                        inDegree.merge(neighbor, -1, Integer::sum);
+                        if (inDegree.get(neighbor) == 0 && !completedNodes.contains(neighbor)) {
+                            readyQueue.add(neighbor);
+                        }
+                    }
+                }
+
+                saveStateSnapshot(run, new ArrayList<>(nodeMap.keySet()), completedNodes, failedNodes,
+                        currentLevel.isEmpty() ? "" : currentLevel.get(0));
+            }
+
+            executorService.shutdown();
+
+            run.setState(completedNodes.size() == dag.getNodes().size() ? WorkflowState.SUCCESS : WorkflowState.FAILED);
             run.setEndTime(LocalDateTime.now());
             run.setDurationMs(Duration.between(run.getStartTime(), run.getEndTime()).toMillis());
             try {
@@ -175,6 +216,28 @@ public class DagExecutor {
             run.setEndTime(LocalDateTime.now());
         }
         runMapper.updateById(run);
+    }
+
+    private Map<String, List<String>> buildAdjacency(DagDefinition dag) {
+        Map<String, List<String>> adjacency = new HashMap<>();
+        for (DagNode node : dag.getNodes()) {
+            adjacency.putIfAbsent(node.getId(), new ArrayList<>());
+        }
+        for (DagEdge edge : dag.getEdges()) {
+            adjacency.computeIfAbsent(edge.getSource(), k -> new ArrayList<>()).add(edge.getTarget());
+        }
+        return adjacency;
+    }
+
+    private Map<String, Integer> buildInDegree(DagDefinition dag) {
+        Map<String, Integer> inDegree = new HashMap<>();
+        for (DagNode node : dag.getNodes()) {
+            inDegree.putIfAbsent(node.getId(), 0);
+        }
+        for (DagEdge edge : dag.getEdges()) {
+            inDegree.merge(edge.getTarget(), 1, Integer::sum);
+        }
+        return inDegree;
     }
 
     private DagDefinition parseDag(String dagJson) {

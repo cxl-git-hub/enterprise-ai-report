@@ -160,6 +160,7 @@ import { useTable } from '@/composables/useTable'
 import { useModal } from '@/composables/useModal'
 import { schemaApi, type Schema, type SchemaForm, type SchemaVersion, type SchemaColumn } from '@/api/schema'
 import { datasetApi, type Dataset } from '@/api/dataset'
+import { post } from '@/api/request'
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
@@ -243,8 +244,25 @@ function addSampleColumn() {
 }
 
 function aiSuggestColumns() {
-  // In production, call AI endpoint
-  message.info('AI建议功能需要连接后端AI服务')
+  if (!formState.name) {
+    message.warning('请先输入Schema名称')
+    return
+  }
+  message.loading({ content: 'AI正在分析并建议列定义...', key: 'ai-suggest', duration: 0 })
+  post<{ data: { columns: SchemaColumn[] } }>('/ai/suggest-columns', {
+    schemaName: formState.name,
+    description: formState.description,
+    datasetId: formState.datasetId,
+  }).then((res) => {
+    if (res?.data?.columns?.length) {
+      columnsJson.value = JSON.stringify(res.data.columns, null, 2)
+      message.success({ content: `AI建议了 ${res.data.columns.length} 个列定义`, key: 'ai-suggest' })
+    } else {
+      message.info({ content: 'AI未能生成建议，请手动定义', key: 'ai-suggest' })
+    }
+  }).catch(() => {
+    message.error({ content: 'AI建议服务暂时不可用', key: 'ai-suggest' })
+  })
 }
 
 async function handleSubmit() {

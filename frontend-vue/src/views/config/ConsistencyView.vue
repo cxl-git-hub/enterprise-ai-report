@@ -15,7 +15,7 @@
 
     <a-row :gutter="16">
       <!-- Dependency Graph -->
-      <a-col :span="16">
+      <a-col :xs="24" :md="16">
         <a-card title="依赖关系图" :bordered="false" class="page-card">
           <div class="dependency-graph" ref="graphRef">
             <div v-if="graphLoading" class="graph-loading">
@@ -85,7 +85,7 @@
       </a-col>
 
       <!-- Validation & Snapshots -->
-      <a-col :span="8">
+      <a-col :xs="24" :md="8">
         <!-- Validation Results -->
         <a-card title="校验结果" :bordered="false" class="page-card">
           <div v-if="validationResult">

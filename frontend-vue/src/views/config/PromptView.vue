@@ -132,6 +132,7 @@ import ConfirmDelete from '@/components/common/ConfirmDelete.vue'
 import { useTable } from '@/composables/useTable'
 import { useModal } from '@/composables/useModal'
 import { promptApi, type Prompt, type PromptForm } from '@/api/prompt'
+import { post } from '@/api/request'
 import type { FormInstance } from 'ant-design-vue'
 
 const formRef = ref<FormInstance>()
@@ -198,7 +199,31 @@ async function openEditModal(record: Prompt) {
 }
 
 function aiSuggestTemplate() {
-  message.info('AI优化功能需要连接后端AI服务')
+  if (!formState.name) {
+    message.warning('请先输入模板名称')
+    return
+  }
+  message.loading({ content: 'AI正在优化提示词模板...', key: 'ai-optimize', duration: 0 })
+  post<{ data: { template: string; explanation: string } }>('/ai/optimize-prompt', {
+    name: formState.name,
+    description: formState.description,
+    category: formState.category,
+    currentTemplate: formState.template,
+  }).then((res) => {
+    if (res?.data?.template) {
+      formState.template = res.data.template
+      // Auto-extract variables
+      const matches = res.data.template.match(/\{\{(\w+)\}\}/g)
+      if (matches) {
+        formState.variables = [...new Set(matches.map((m: string) => m.replace(/[{}]/g, '')))]
+      }
+      message.success({ content: `AI已优化模板: ${res.data.explanation || '完成'}`, key: 'ai-optimize' })
+    } else {
+      message.info({ content: 'AI未能生成优化建议', key: 'ai-optimize' })
+    }
+  }).catch(() => {
+    message.error({ content: 'AI优化服务暂时不可用', key: 'ai-optimize' })
+  })
 }
 
 async function handleSubmit() {

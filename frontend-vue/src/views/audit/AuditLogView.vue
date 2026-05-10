@@ -142,6 +142,8 @@ function handleDateChange(dates: [Dayjs, Dayjs] | null) {
     searchParams.startDate = undefined
     searchParams.endDate = undefined
   }
+  // Trigger search with updated date range
+  search()
 }
 
 function formatJson(obj: unknown): string {

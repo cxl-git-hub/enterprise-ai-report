@@ -8,9 +8,11 @@ import com.enterprise.report.entity.DataSource;
 import com.enterprise.report.exception.BusinessException;
 import com.enterprise.report.security.TenantContext;
 import com.enterprise.report.service.DataSourceService;
+import com.enterprise.report.service.MinioService;
 import com.enterprise.report.util.EncryptionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/datasources")
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class DataSourceController {
 
     private final DataSourceService dataSourceService;
+    private final MinioService minioService;
 
     @GetMapping
     public ApiResponse<PageResult<DataSource>> list(
@@ -76,5 +79,43 @@ public class DataSourceController {
     @PostMapping("/{id}/test")
     public ApiResponse<Boolean> testConnection(@PathVariable Long id) {
         return ApiResponse.success(dataSourceService.testConnection(id));
+    }
+
+    @PostMapping("/upload")
+    public ApiResponse<DataSource> uploadFile(
+            @RequestParam("name") String name,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("file") MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new BusinessException(400, "文件名不能为空");
+        }
+
+        String ext = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!ext.matches("xlsx|xls|csv|json")) {
+            throw new BusinessException(400, "不支持的文件格式，仅支持 Excel、CSV、JSON");
+        }
+
+        // Upload to MinIO
+        String objectName = "uploads/" + TenantContext.getTenantId() + "/" + System.currentTimeMillis() + "_" + originalFilename;
+        String filePath;
+        try {
+            filePath = minioService.uploadFile(objectName, file.getInputStream(), file.getSize(), file.getContentType());
+        } catch (Exception e) {
+            throw new BusinessException(500, "文件上传失败: " + e.getMessage());
+        }
+
+        // Create data source record
+        DataSource ds = new DataSource();
+        ds.setTenantId(TenantContext.getTenantId());
+        ds.setName(name);
+        ds.setDescription(description != null ? description : "上传文件: " + originalFilename);
+        ds.setType("file");
+        ds.setConfig("{\"filePath\":\"" + filePath + "\",\"fileName\":\"" + originalFilename + "\",\"fileType\":\"" + ext + "\"}");
+        ds.setStatus(1);
+        dataSourceService.save(ds);
+
+        ds.setEncryptedPassword(null);
+        return ApiResponse.success(ds);
     }
 }

@@ -3,7 +3,7 @@
     <PageHeader title="AI分析" subtitle="AI驱动的数据分析" />
 
     <a-row :gutter="16">
-      <a-col :span="8">
+      <a-col :xs="24" :md="8">
         <a-card title="分析配置" :bordered="false" class="page-card">
           <a-form layout="vertical">
             <a-form-item label="选择数据集">
@@ -38,7 +38,7 @@
         </a-card>
       </a-col>
 
-      <a-col :span="16">
+      <a-col :xs="24" :md="16">
         <a-card title="分析结果" :bordered="false" class="page-card">
           <div v-if="analyzing" class="analyzing-state">
             <a-spin size="large" />

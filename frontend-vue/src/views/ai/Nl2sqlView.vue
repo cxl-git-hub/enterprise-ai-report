@@ -4,7 +4,7 @@
 
     <a-row :gutter="16">
       <!-- Schema Context Panel -->
-      <a-col :span="6">
+      <a-col :xs="24" :md="6">
         <a-card title="Schema上下文" :bordered="false" class="page-card" size="small">
           <a-select
             v-model:value="selectedSchemaId"
@@ -34,7 +34,7 @@
       </a-col>
 
       <!-- Main Content -->
-      <a-col :span="18">
+      <a-col :xs="24" :md="18">
         <!-- Query Input -->
         <a-card :bordered="false" class="page-card" size="small">
           <div class="query-input">

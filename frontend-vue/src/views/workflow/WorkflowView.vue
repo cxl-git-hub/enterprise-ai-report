@@ -88,18 +88,101 @@
         <a-form-item label="描述" name="description">
           <a-textarea v-model:value="formState.description" :rows="2" placeholder="请输入描述" />
         </a-form-item>
-        <a-form-item label="DAG节点定义 (JSON)">
+        <a-form-item label="DAG节点定义">
           <template #tooltip><span>定义工作流的节点和依赖关系</span></template>
-          <a-button size="small" style="margin-bottom: 8px" @click="addSampleNode">
-            <PlusOutlined /> 添加示例节点
-          </a-button>
-          <div class="code-editor">
-            <a-textarea
-              v-model:value="nodesJson"
-              :rows="12"
-              placeholder='[{"id": "node1", "name": "数据提取", "type": "extract", "config": {}, "dependencies": []}]'
-              style="font-family: monospace; font-size: 13px"
-            />
+
+          <!-- Visual DAG Editor -->
+          <div class="dag-editor">
+            <div class="dag-toolbar">
+              <a-space>
+                <a-button size="small" type="primary" @click="addDagNode">
+                  <PlusOutlined /> 添加节点
+                </a-button>
+                <a-button size="small" @click="addSampleDag">
+                  <ThunderboltOutlined /> 加载示例
+                </a-button>
+                <a-button size="small" @click="toggleJsonEdit">
+                  <CodeOutlined /> {{ showJsonEdit ? '可视化' : 'JSON' }}
+                </a-button>
+              </a-space>
+            </div>
+
+            <!-- Visual Node List -->
+            <div v-if="!showJsonEdit" class="dag-nodes">
+              <div v-if="dagNodes.length === 0" class="dag-empty">
+                <a-empty description="暂无节点，点击上方按钮添加" :image-style="{ height: '40px' }" />
+              </div>
+              <div
+                v-for="(node, idx) in dagNodes"
+                :key="node.id"
+                class="dag-node-card"
+                :class="{ 'dag-node-error': nodeErrors[idx] }"
+              >
+                <div class="dag-node-header">
+                  <a-tag :color="nodeTypeColors[node.type] || 'default'">
+                    {{ nodeTypeLabels[node.type] || node.type }}
+                  </a-tag>
+                  <span class="dag-node-id">#{{ idx + 1 }}</span>
+                  <a-button
+                    type="link"
+                    size="small"
+                    danger
+                    @click="removeDagNode(idx)"
+                  >
+                    <DeleteOutlined />
+                  </a-button>
+                </div>
+                <a-row :gutter="8" style="margin-top: 8px">
+                  <a-col :span="8">
+                    <a-input
+                      v-model:value="node.name"
+                      size="small"
+                      placeholder="节点名称"
+                      @change="syncDagToJson"
+                    />
+                  </a-col>
+                  <a-col :span="8">
+                    <a-select
+                      v-model:value="node.type"
+                      size="small"
+                      placeholder="节点类型"
+                      style="width: 100%"
+                      @change="syncDagToJson"
+                    >
+                      <a-select-option value="data_fetch">数据提取</a-select-option>
+                      <a-select-option value="kpi_calc">KPI计算</a-select-option>
+                      <a-select-option value="ai_analysis">AI分析</a-select-option>
+                      <a-select-option value="report">报表生成</a-select-option>
+                      <a-select-option value="output">输出</a-select-option>
+                    </a-select>
+                  </a-col>
+                  <a-col :span="8">
+                    <a-select
+                      v-model:value="node.dependencies"
+                      size="small"
+                      mode="multiple"
+                      placeholder="依赖节点"
+                      style="width: 100%"
+                      :options="dagNodes.filter((_, i) => i !== idx).map(n => ({ label: n.name || n.id, value: n.id }))"
+                      @change="syncDagToJson"
+                    />
+                  </a-col>
+                </a-row>
+                <div v-if="nodeErrors[idx]" class="dag-node-error-msg">
+                  {{ nodeErrors[idx] }}
+                </div>
+              </div>
+            </div>
+
+            <!-- JSON Fallback -->
+            <div v-else class="code-editor">
+              <a-textarea
+                v-model:value="nodesJson"
+                :rows="12"
+                placeholder='[{"id": "node1", "name": "数据提取", "type": "data_fetch", "config": {}, "dependencies": []}]'
+                style="font-family: monospace; font-size: 13px"
+              />
+            </div>
           </div>
         </a-form-item>
       </a-form>
@@ -110,7 +193,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, SearchOutlined, ThunderboltOutlined, DeleteOutlined, CodeOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmDelete from '@/components/common/ConfirmDelete.vue'
 import { useTable } from '@/composables/useTable'
@@ -121,6 +204,34 @@ import type { FormInstance } from 'ant-design-vue'
 const formRef = ref<FormInstance>()
 const triggeringId = ref<string | null>(null)
 const nodesJson = ref('')
+const showJsonEdit = ref(false)
+
+interface DagNodeItem {
+  id: string
+  name: string
+  type: string
+  dependencies: string[]
+  config?: Record<string, unknown>
+}
+
+const dagNodes = ref<DagNodeItem[]>([])
+const nodeErrors = ref<Record<number, string>>({})
+
+const nodeTypeLabels: Record<string, string> = {
+  data_fetch: '数据提取',
+  kpi_calc: 'KPI计算',
+  ai_analysis: 'AI分析',
+  report: '报表生成',
+  output: '输出',
+}
+
+const nodeTypeColors: Record<string, string> = {
+  data_fetch: 'blue',
+  kpi_calc: 'green',
+  ai_analysis: 'purple',
+  report: 'orange',
+  output: 'cyan',
+}
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =
   useTable<Workflow>({
@@ -155,6 +266,9 @@ function openCreateModal() {
   editingId.value = null
   Object.assign(formState, { name: '', description: '', nodes: [], schedule: '' })
   nodesJson.value = '[]'
+  dagNodes.value = []
+  nodeErrors.value = {}
+  showJsonEdit.value = false
   openModal()
 }
 
@@ -162,7 +276,16 @@ async function openEditModal(record: Workflow) {
   openModal(record.id)
   const res = await workflowApi.detail(record.id)
   Object.assign(formState, res.data)
-  nodesJson.value = JSON.stringify(res.data.nodes || [], null, 2)
+  const nodes = res.data.nodes || []
+  nodesJson.value = JSON.stringify(nodes, null, 2)
+  dagNodes.value = nodes.map((n: any) => ({
+    id: n.id || `node_${Date.now()}`,
+    name: n.name || '',
+    type: n.type || 'data_fetch',
+    dependencies: n.dependencies || [],
+    config: n.config || {},
+  }))
+  showJsonEdit.value = false
 }
 
 function addSampleNode() {
@@ -180,6 +303,91 @@ function addSampleNode() {
   } catch {
     nodesJson.value = JSON.stringify([sample], null, 2)
   }
+}
+
+function addDagNode() {
+  const idx = dagNodes.value.length + 1
+  const newNode: DagNodeItem = {
+    id: `node_${Date.now()}`,
+    name: `节点${idx}`,
+    type: 'data_fetch',
+    dependencies: [],
+  }
+  dagNodes.value.push(newNode)
+  syncDagToJson()
+}
+
+function removeDagNode(idx: number) {
+  const removedId = dagNodes.value[idx].id
+  dagNodes.value.splice(idx, 1)
+  // Remove references to deleted node
+  dagNodes.value.forEach((node) => {
+    node.dependencies = node.dependencies.filter((dep) => dep !== removedId)
+  })
+  syncDagToJson()
+}
+
+function syncDagToJson() {
+  nodesJson.value = JSON.stringify(
+    dagNodes.value.map((n) => ({
+      id: n.id,
+      name: n.name,
+      type: n.type,
+      config: n.config || {},
+      dependencies: n.dependencies,
+    })),
+    null,
+    2
+  )
+  // Validate
+  validateDagNodes()
+}
+
+function validateDagNodes() {
+  nodeErrors.value = {}
+  const ids = new Set(dagNodes.value.map((n) => n.id))
+  dagNodes.value.forEach((node, idx) => {
+    if (!node.name?.trim()) {
+      nodeErrors.value[idx] = '节点名称不能为空'
+    }
+    for (const dep of node.dependencies) {
+      if (!ids.has(dep)) {
+        nodeErrors.value[idx] = `依赖节点 ${dep} 不存在`
+      }
+    }
+  })
+}
+
+function addSampleDag() {
+  const now = Date.now()
+  dagNodes.value = [
+    { id: `node_${now}`, name: '数据提取', type: 'data_fetch', dependencies: [] },
+    { id: `node_${now + 1}`, name: 'KPI计算', type: 'kpi_calc', dependencies: [`node_${now}`] },
+    { id: `node_${now + 2}`, name: 'AI分析', type: 'ai_analysis', dependencies: [`node_${now + 1}`] },
+    { id: `node_${now + 3}`, name: '报表生成', type: 'report', dependencies: [`node_${now + 2}`] },
+    { id: `node_${now + 4}`, name: '输出', type: 'output', dependencies: [`node_${now + 3}`] },
+  ]
+  syncDagToJson()
+}
+
+function toggleJsonEdit() {
+  if (showJsonEdit.value) {
+    // Switching from JSON to visual - parse JSON
+    try {
+      const parsed = JSON.parse(nodesJson.value || '[]')
+      dagNodes.value = parsed.map((n: any) => ({
+        id: n.id || `node_${Date.now()}`,
+        name: n.name || '',
+        type: n.type || 'data_fetch',
+        dependencies: n.dependencies || [],
+        config: n.config || {},
+      }))
+    } catch {
+      message.error('JSON格式错误，无法切换到可视化模式')
+      return
+    }
+  }
+  showJsonEdit.value = !showJsonEdit.value
 }
 
 async function handleTrigger(record: Workflow) {
@@ -224,4 +432,62 @@ async function handleDelete(id: string) {
 <style lang="scss" scoped>
 .search-bar { margin-bottom: 16px; }
 .field-hint { font-size: 12px; color: #999; margin-top: 4px; }
+
+.dag-editor {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dag-toolbar {
+  padding: 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dag-nodes {
+  padding: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dag-empty {
+  padding: 24px;
+}
+
+.dag-node-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #91caff;
+    box-shadow: 0 2px 8px rgba(22, 119, 255, 0.1);
+  }
+
+  &.dag-node-error {
+    border-color: #ff4d4f;
+  }
+}
+
+.dag-node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .dag-node-id {
+    color: #999;
+    font-size: 12px;
+    flex: 1;
+  }
+}
+
+.dag-node-error-msg {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 4px;
+}
 </style>

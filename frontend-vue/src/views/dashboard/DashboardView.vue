@@ -3,73 +3,52 @@
     <PageHeader title="仪表盘" subtitle="系统运行概览" />
 
     <a-row :gutter="16" class="stat-row">
-      <a-col :span="6">
+      <a-col :xs="12" :sm="12" :md="6" v-for="(item, idx) in statItems" :key="idx">
         <div class="stat-card">
-          <div class="stat-icon" style="background: #e6f4ff; color: #1677ff">
-            <DatabaseOutlined />
-          </div>
-          <div class="stat-value">{{ stats.datasourceCount }}</div>
-          <div class="stat-label">数据源</div>
-        </div>
-      </a-col>
-      <a-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: #f6ffed; color: #52c41a">
-            <FundOutlined />
-          </div>
-          <div class="stat-value">{{ stats.kpiCount }}</div>
-          <div class="stat-label">KPI指标</div>
-        </div>
-      </a-col>
-      <a-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: #fff7e6; color: #fa8c16">
-            <ApartmentOutlined />
-          </div>
-          <div class="stat-value">{{ stats.workflowCount }}</div>
-          <div class="stat-label">工作流</div>
-        </div>
-      </a-col>
-      <a-col :span="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: #fff1f0; color: #ff4d4f">
-            <FileTextOutlined />
-          </div>
-          <div class="stat-value">{{ stats.reportCount }}</div>
-          <div class="stat-label">报表输出</div>
+          <a-spin :spinning="statsLoading">
+            <div class="stat-icon" :style="{ background: item.bg, color: item.color }">
+              <component :is="item.icon" />
+            </div>
+            <div class="stat-value">{{ item.value }}</div>
+            <div class="stat-label">{{ item.label }}</div>
+          </a-spin>
         </div>
       </a-col>
     </a-row>
 
     <a-row :gutter="16">
-      <a-col :span="16">
+      <a-col :xs="24" :md="16">
         <a-card title="最近工作流运行" :bordered="false" class="page-card">
-          <a-table
-            :columns="runColumns"
-            :data-source="recentRuns"
-            :pagination="false"
-            size="small"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'status'">
-                <a-badge
-                  :status="getStatusBadge(record.status)"
-                  :text="getStatusText(record.status)"
-                />
+          <a-spin :spinning="runsLoading">
+            <a-table
+              :columns="runColumns"
+              :data-source="recentRuns"
+              :pagination="false"
+              size="small"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'status'">
+                  <a-badge
+                    :status="getStatusBadge(record.status)"
+                    :text="getStatusText(record.status)"
+                  />
+                </template>
+                <template v-if="column.key === 'duration'">
+                  {{ formatDuration(record.duration) }}
+                </template>
+                <template v-if="column.key === 'action'">
+                  <router-link :to="`/workflow/run/${record.id}`">查看</router-link>
+                </template>
               </template>
-              <template v-if="column.key === 'duration'">
-                {{ formatDuration(record.duration) }}
-              </template>
-              <template v-if="column.key === 'action'">
-                <router-link :to="`/workflow/run/${record.id}`">查看</router-link>
-              </template>
-            </template>
-          </a-table>
+            </a-table>
+          </a-spin>
         </a-card>
       </a-col>
-      <a-col :span="8">
-        <a-card title="KPI执行概览" :bordered="false" class="page-card">
-          <div ref="kpiChartRef" style="height: 300px"></div>
+      <a-col :xs="24" :md="8">
+        <a-card title="运行状态分布" :bordered="false" class="page-card">
+          <a-spin :spinning="chartLoading">
+            <div ref="kpiChartRef" style="height: 300px"></div>
+          </a-spin>
         </a-card>
       </a-col>
     </a-row>
@@ -77,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, markRaw } from 'vue'
 import {
   DatabaseOutlined,
   FundOutlined,
@@ -85,6 +64,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import { get } from '@/api/request'
 import * as echarts from 'echarts'
 
 const stats = reactive({
@@ -104,6 +84,16 @@ interface RecentRun {
 
 const recentRuns = ref<RecentRun[]>([])
 const kpiChartRef = ref<HTMLElement>()
+const statsLoading = ref(true)
+const runsLoading = ref(true)
+const chartLoading = ref(true)
+
+const statItems = computed(() => [
+  { icon: markRaw(DatabaseOutlined), value: stats.datasourceCount, label: '数据源', bg: '#e6f4ff', color: '#1677ff' },
+  { icon: markRaw(FundOutlined), value: stats.kpiCount, label: 'KPI指标', bg: '#f6ffed', color: '#52c41a' },
+  { icon: markRaw(ApartmentOutlined), value: stats.workflowCount, label: '工作流', bg: '#fff7e6', color: '#fa8c16' },
+  { icon: markRaw(FileTextOutlined), value: stats.reportCount, label: '报表输出', bg: '#fff1f0', color: '#ff4d4f' },
+])
 
 const runColumns = [
   { title: '工作流', dataIndex: 'workflowName', key: 'workflowName' },
@@ -119,6 +109,8 @@ function getStatusBadge(status: string) {
     failed: 'error',
     running: 'processing',
     pending: 'warning',
+    cancelled: 'default',
+    retrying: 'warning',
   }
   return (map[status] || 'default') as 'success' | 'error' | 'processing' | 'warning' | 'default'
 }
@@ -129,17 +121,75 @@ function getStatusText(status: string) {
     failed: '失败',
     running: '运行中',
     pending: '等待中',
+    cancelled: '已取消',
+    retrying: '重试中',
   }
   return map[status] || status
 }
 
 function formatDuration(ms: number): string {
+  if (!ms) return '-'
   if (ms < 1000) return `${ms}ms`
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
   return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`
 }
 
-function initChart() {
+async function loadStats() {
+  statsLoading.value = true
+  try {
+    const res = await get<{ data: Record<string, number> }>('/dashboard/stats')
+    if (res?.data) {
+      stats.datasourceCount = res.data.datasourceCount ?? 0
+      stats.kpiCount = res.data.kpiCount ?? 0
+      stats.workflowCount = res.data.workflowCount ?? 0
+      stats.reportCount = res.data.reportCount ?? 0
+    }
+  } catch {
+    // Show 0 on error
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+async function loadRecentRuns() {
+  runsLoading.value = true
+  try {
+    const res = await get<{ data: RecentRun[] }>('/dashboard/recent-runs', { limit: 5 })
+    recentRuns.value = res?.data ?? []
+  } catch {
+    recentRuns.value = []
+  } finally {
+    runsLoading.value = false
+  }
+}
+
+async function loadKpiChart() {
+  chartLoading.value = true
+  try {
+    const res = await get<{ data: Array<{ status: string; count: number }> }>('/dashboard/run-status-distribution')
+    const statusData = res?.data ?? []
+    const statusConfig: Record<string, { name: string; color: string }> = {
+      success: { name: '成功', color: '#52c41a' },
+      failed: { name: '失败', color: '#ff4d4f' },
+      running: { name: '运行中', color: '#1677ff' },
+      pending: { name: '等待中', color: '#faad14' },
+    }
+    const chartData = statusData.map((item) => {
+      const cfg = statusConfig[item.status] || { name: item.status, color: '#999' }
+      return { value: item.count, name: cfg.name, color: cfg.color }
+    })
+    if (chartData.length === 0) {
+      chartData.push({ value: 0, name: '暂无数据', color: '#d9d9d9' })
+    }
+    initChart(chartData)
+  } catch {
+    initChart([{ value: 0, name: '暂无数据', color: '#d9d9d9' }])
+  } finally {
+    chartLoading.value = false
+  }
+}
+
+function initChart(data: Array<{ value: number; name: string; color: string }>) {
   if (!kpiChartRef.value) return
   const chart = echarts.init(kpiChartRef.value)
   chart.setOption({
@@ -153,32 +203,20 @@ function initChart() {
         itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
         label: { show: false },
         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
-        data: [
-          { value: 735, name: '成功', itemStyle: { color: '#52c41a' } },
-          { value: 58, name: '失败', itemStyle: { color: '#ff4d4f' } },
-          { value: 48, name: '运行中', itemStyle: { color: '#1677ff' } },
-        ],
+        data: data.map((d) => ({
+          value: d.value,
+          name: d.name,
+          itemStyle: { color: d.color },
+        })),
       },
     ],
   })
 }
 
 onMounted(() => {
-  // Simulated data - in production, fetch from API
-  stats.datasourceCount = 12
-  stats.kpiCount = 45
-  stats.workflowCount = 8
-  stats.reportCount = 156
-
-  recentRuns.value = [
-    { id: '1', workflowName: '日报生成', status: 'success', startedAt: '2024-03-10 09:00', duration: 45000 },
-    { id: '2', workflowName: '周报汇总', status: 'running', startedAt: '2024-03-10 08:30', duration: 120000 },
-    { id: '3', workflowName: 'KPI计算', status: 'failed', startedAt: '2024-03-10 08:00', duration: 30000 },
-    { id: '4', workflowName: '数据同步', status: 'success', startedAt: '2024-03-10 07:00', duration: 180000 },
-    { id: '5', workflowName: '月度报表', status: 'pending', startedAt: '2024-03-10 06:00', duration: 0 },
-  ]
-
-  initChart()
+  loadStats()
+  loadRecentRuns()
+  loadKpiChart()
 })
 </script>
 
@@ -193,6 +231,17 @@ onMounted(() => {
   padding: 20px;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  min-height: 120px;
+
+  :deep(.ant-spin-nested-loading) {
+    min-height: auto;
+  }
+
+  :deep(.ant-spin-container) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 
   .stat-icon {
     width: 48px;

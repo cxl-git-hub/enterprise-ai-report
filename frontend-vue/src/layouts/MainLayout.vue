@@ -103,6 +103,13 @@
           </a-breadcrumb>
         </div>
         <div class="header-right">
+          <a-input-search
+            v-model:value="globalSearch"
+            placeholder="搜索功能..."
+            style="width: 200px; margin-right: 16px"
+            @search="handleGlobalSearch"
+            allow-clear
+          />
           <a-dropdown>
             <span class="user-info">
               <a-avatar :size="28" style="background-color: #1677ff">
@@ -137,6 +144,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { message } from 'ant-design-vue'
 import {
   DashboardOutlined,
   SettingOutlined,
@@ -159,6 +167,7 @@ const authStore = useAuthStore()
 
 const selectedKeys = ref<string[]>([route.path])
 const openKeys = ref<string[]>([])
+const globalSearch = ref('')
 
 const contentMargin = computed(() => appStore.sidebarCollapsed ? '80px' : '256px')
 
@@ -191,6 +200,40 @@ function handleUserMenuClick({ key }: { key: string }) {
     authStore.logout()
     router.push('/login')
   }
+}
+
+function handleGlobalSearch(value: string) {
+  if (!value.trim()) return
+  // Search through menu items
+  const searchMap: Record<string, string> = {
+    '数据源': '/datahub/datasources',
+    '数据集': '/datahub/datasets',
+    'Schema': '/config/schemas',
+    'KPI': '/config/kpis',
+    '提示词': '/config/prompts',
+    '模板': '/config/report-templates',
+    '一致性': '/config/consistency',
+    '工作流': '/workflow/definitions',
+    '运行': '/workflow/runs',
+    'NL2SQL': '/ai/nl2sql',
+    '分析': '/ai/analysis',
+    '追踪': '/ai/traces',
+    '报表': '/output/reports',
+    '审计': '/audit',
+    '用户': '/admin/users',
+    '租户': '/admin/tenants',
+    '角色': '/admin/roles',
+    '仪表盘': '/dashboard',
+  }
+  const keyword = value.toLowerCase()
+  for (const [key, path] of Object.entries(searchMap)) {
+    if (key.toLowerCase().includes(keyword)) {
+      router.push(path)
+      globalSearch.value = ''
+      return
+    }
+  }
+  message.info('未找到匹配的功能页面')
 }
 </script>
 
