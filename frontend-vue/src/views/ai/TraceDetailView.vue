@@ -12,24 +12,22 @@
     <a-spin :spinning="loading">
       <a-row :gutter="16" v-if="traceDetail">
         <!-- Summary -->
-        <a-col :span="24">
+        <a-col :xs="24" :md="24">
           <a-card :bordered="false" class="page-card">
             <a-row :gutter="16">
-              <a-col :span="4">
-                <div class="stat-item">
-                  <div class="stat-label">追踪类型</div>
+              <a-col :xs="12" :sm="8" :md="4">
                   <a-tag :color="typeColor[traceDetail.traceType] || 'default'" style="font-size: 14px">
                     {{ typeLabel[traceDetail.traceType] || traceDetail.traceType }}
                   </a-tag>
                 </div>
               </a-col>
-              <a-col :span="4">
+              <a-col :xs="12" :sm="8" :md="4">
                 <div class="stat-item">
                   <div class="stat-label">模型</div>
                   <div class="stat-value">{{ traceDetail.modelName }}</div>
                 </div>
               </a-col>
-              <a-col :span="3">
+              <a-col :xs="12" :sm="8" :md="3">
                 <div class="stat-item">
                   <div class="stat-label">状态</div>
                   <a-badge
@@ -38,31 +36,31 @@
                   />
                 </div>
               </a-col>
-              <a-col :span="3">
+              <a-col :xs="12" :sm="8" :md="3">
                 <div class="stat-item">
                   <div class="stat-label">Prompt Tokens</div>
                   <div class="stat-value">{{ traceDetail.promptTokens?.toLocaleString() }}</div>
                 </div>
               </a-col>
-              <a-col :span="3">
+              <a-col :xs="12" :sm="8" :md="3">
                 <div class="stat-item">
                   <div class="stat-label">Completion Tokens</div>
                   <div class="stat-value">{{ traceDetail.completionTokens?.toLocaleString() }}</div>
                 </div>
               </a-col>
-              <a-col :span="3">
+              <a-col :xs="12" :sm="8" :md="3">
                 <div class="stat-item">
                   <div class="stat-label">总Tokens</div>
                   <div class="stat-value" style="color: #1677ff">{{ traceDetail.totalTokens?.toLocaleString() }}</div>
                 </div>
               </a-col>
-              <a-col :span="2">
+              <a-col :xs="12" :sm="6" :md="2">
                 <div class="stat-item">
                   <div class="stat-label">费用</div>
                   <div class="stat-value" style="color: #fa8c16">${{ (traceDetail.cost || 0).toFixed(4) }}</div>
                 </div>
               </a-col>
-              <a-col :span="2">
+              <a-col :xs="12" :sm="6" :md="2">
                 <div class="stat-item">
                   <div class="stat-label">耗时</div>
                   <div class="stat-value">{{ traceDetail.duration }}ms</div>
@@ -72,9 +70,12 @@
           </a-card>
         </a-col>
 
-        <a-col :span="16">
+        <a-col :xs="24" :md="16">
           <!-- Full Prompt -->
           <a-card title="完整Prompt" :bordered="false" class="page-card">
+            <template #extra>
+              <a-button size="small" @click="copyText(traceDetail.fullPrompt)"><CopyOutlined /> 复制</a-button>
+            </template>
             <div class="prompt-display">
               <pre>{{ traceDetail.fullPrompt }}</pre>
             </div>
@@ -114,7 +115,7 @@
           </a-card>
         </a-col>
 
-        <a-col :span="8">
+        <a-col :xs="24" :md="8">
           <!-- Cost Breakdown -->
           <a-card title="费用明细" :bordered="false" class="page-card">
             <div ref="costChartRef" style="height: 200px"></div>
@@ -169,6 +170,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { CopyOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { aiTraceApi, type AiTraceDetail } from '@/api/ai-trace'
 import * as echarts from 'echarts'
@@ -198,6 +201,11 @@ function formatJson(obj: unknown): string {
   } catch {
     return String(obj)
   }
+}
+
+function copyText(text: string) {
+  navigator.clipboard.writeText(text || '')
+  message.success('已复制到剪贴板')
 }
 
 function renderCostChart() {

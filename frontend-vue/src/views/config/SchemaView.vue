@@ -87,23 +87,84 @@
           </a-textarea>
         </a-form-item>
 
-        <a-form-item label="列定义 (JSON)">
+        <a-form-item label="列定义">
           <template #tooltip><span>定义列的名称、类型、业务含义等信息</span></template>
-          <a-button size="small" style="margin-bottom: 8px" @click="addSampleColumn">
-            <PlusOutlined /> 添加示例列
-          </a-button>
-          <div class="code-editor">
-            <a-textarea
-              v-model:value="columnsJson"
-              :rows="10"
-              placeholder='[{"name": "id", "type": "bigint", "nullable": false, "description": "主键ID", "businessMeaning": "订单唯一标识"}]'
-              style="font-family: monospace; font-size: 13px"
-            />
-          </div>
-          <div class="field-hint">
-            <a-button type="link" size="small" @click="aiSuggestColumns">
-              <ThunderboltOutlined /> AI建议列定义
-            </a-button>
+
+          <!-- Structured Column Editor -->
+          <div class="column-editor">
+            <div class="column-toolbar">
+              <a-space>
+                <a-button size="small" type="primary" @click="addColumn">
+                  <PlusOutlined /> 添加列
+                </a-button>
+                <a-button size="small" @click="aiSuggestColumns">
+                  <ThunderboltOutlined /> AI建议
+                </a-button>
+                <a-button size="small" @click="toggleColumnJson">
+                  <CodeOutlined /> {{ showColumnJson ? '表单' : 'JSON' }}
+                </a-button>
+              </a-space>
+            </div>
+
+            <!-- Visual Column List -->
+            <div v-if="!showColumnJson" class="column-list">
+              <div v-if="columnItems.length === 0" class="column-empty">
+                <a-empty description="暂无列定义，点击上方按钮添加" :image-style="{ height: '30px' }" />
+              </div>
+              <div
+                v-for="(col, idx) in columnItems"
+                :key="idx"
+                class="column-card"
+              >
+                <div class="column-card-header">
+                  <a-tag :color="colTypeColors[col.type] || 'default'">{{ col.type || '未设置' }}</a-tag>
+                  <span class="column-index">#{{ idx + 1 }}</span>
+                  <a-space>
+                    <a-button type="link" size="small" @click="moveColumn(idx, -1)" :disabled="idx === 0">↑</a-button>
+                    <a-button type="link" size="small" @click="moveColumn(idx, 1)" :disabled="idx === columnItems.length - 1">↓</a-button>
+                    <a-button type="link" size="small" danger @click="removeColumn(idx)">
+                      <DeleteOutlined />
+                    </a-button>
+                  </a-space>
+                </div>
+                <a-row :gutter="8" style="margin-top: 8px">
+                  <a-col :span="6">
+                    <a-input v-model:value="col.name" size="small" placeholder="列名(英文)" @change="syncColumnsToJson" />
+                  </a-col>
+                  <a-col :span="4">
+                    <a-select v-model:value="col.type" size="small" style="width: 100%" @change="syncColumnsToJson">
+                      <a-select-option value="string">字符串</a-select-option>
+                      <a-select-option value="number">数字</a-select-option>
+                      <a-select-option value="date">日期</a-select-option>
+                      <a-select-option value="boolean">布尔</a-select-option>
+                      <a-select-option value="json">JSON</a-select-option>
+                    </a-select>
+                  </a-col>
+                  <a-col :span="4">
+                    <a-input v-model:value="col.description" size="small" placeholder="描述" @change="syncColumnsToJson" />
+                  </a-col>
+                  <a-col :span="6">
+                    <a-input v-model:value="col.businessMeaning" size="small" placeholder="业务含义" @change="syncColumnsToJson" />
+                  </a-col>
+                  <a-col :span="4">
+                    <a-space>
+                      <a-checkbox v-model:checked="col.nullable" @change="syncColumnsToJson">可空</a-checkbox>
+                      <a-checkbox v-model:checked="col.isPrimaryKey" @change="syncColumnsToJson">PK</a-checkbox>
+                    </a-space>
+                  </a-col>
+                </a-row>
+              </div>
+            </div>
+
+            <!-- JSON Fallback -->
+            <div v-else class="code-editor">
+              <a-textarea
+                v-model:value="columnsJson"
+                :rows="10"
+                placeholder='[{"name": "id", "type": "bigint", "nullable": false, "description": "主键ID", "businessMeaning": "订单唯一标识"}]'
+                style="font-family: monospace; font-size: 13px"
+              />
+            </div>
           </div>
         </a-form-item>
 
@@ -153,7 +214,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, SearchOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, SearchOutlined, ThunderboltOutlined, DeleteOutlined, CodeOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ConfirmDelete from '@/components/common/ConfirmDelete.vue'
 import { useTable } from '@/composables/useTable'
@@ -170,6 +231,30 @@ const currentSchema = ref<Schema | null>(null)
 const datasetOptions = ref<Dataset[]>([])
 const columnsJson = ref('')
 const changeNote = ref('')
+const showColumnJson = ref(false)
+
+interface ColumnItem {
+  name: string
+  type: string
+  nullable: boolean
+  isPrimaryKey: boolean
+  description: string
+  businessMeaning: string
+  example?: string
+}
+
+const columnItems = ref<ColumnItem[]>([])
+
+const colTypeColors: Record<string, string> = {
+  string: 'blue',
+  number: 'green',
+  date: 'orange',
+  boolean: 'purple',
+  json: 'cyan',
+  bigint: 'green',
+  varchar: 'blue',
+  datetime: 'orange',
+}
 
 const { loading, dataSource, pagination, searchParams, fetchData, handleTableChange, search, resetSearch } =
   useTable<Schema>({
@@ -204,6 +289,8 @@ function openCreateModal() {
   editingId.value = null
   Object.assign(formState, { name: '', description: '', datasetId: '', columns: [] })
   columnsJson.value = '[]'
+  columnItems.value = []
+  showColumnJson.value = false
   changeNote.value = ''
   openModal()
 }
@@ -212,7 +299,17 @@ async function openEditModal(record: Schema) {
   openModal(record.id)
   const res = await schemaApi.detail(record.id)
   Object.assign(formState, res.data)
-  columnsJson.value = JSON.stringify(res.data.columns || [], null, 2)
+  const cols = res.data.columns || []
+  columnsJson.value = JSON.stringify(cols, null, 2)
+  columnItems.value = cols.map((c: any) => ({
+    name: c.name || '',
+    type: c.type || 'string',
+    nullable: c.nullable !== false,
+    isPrimaryKey: c.isPrimaryKey || false,
+    description: c.description || '',
+    businessMeaning: c.businessMeaning || '',
+  }))
+  showColumnJson.value = false
   changeNote.value = ''
 }
 
@@ -241,6 +338,58 @@ function addSampleColumn() {
   } catch {
     columnsJson.value = JSON.stringify([sample], null, 2)
   }
+}
+
+function addColumn() {
+  columnItems.value.push({
+    name: '',
+    type: 'string',
+    nullable: true,
+    isPrimaryKey: false,
+    description: '',
+    businessMeaning: '',
+  })
+  syncColumnsToJson()
+}
+
+function removeColumn(idx: number) {
+  columnItems.value.splice(idx, 1)
+  syncColumnsToJson()
+}
+
+function moveColumn(idx: number, direction: number) {
+  const target = idx + direction
+  if (target < 0 || target >= columnItems.value.length) return
+  const temp = columnItems.value[idx]
+  columnItems.value[idx] = columnItems.value[target]
+  columnItems.value[target] = temp
+  columnItems.value = [...columnItems.value] // trigger reactivity
+  syncColumnsToJson()
+}
+
+function syncColumnsToJson() {
+  columnsJson.value = JSON.stringify(columnItems.value, null, 2)
+}
+
+function toggleColumnJson() {
+  if (showColumnJson.value) {
+    // Switching from JSON to form - parse
+    try {
+      const parsed = JSON.parse(columnsJson.value || '[]')
+      columnItems.value = parsed.map((c: any) => ({
+        name: c.name || '',
+        type: c.type || 'string',
+        nullable: c.nullable !== false,
+        isPrimaryKey: c.isPrimaryKey || false,
+        description: c.description || '',
+        businessMeaning: c.businessMeaning || '',
+      }))
+    } catch {
+      message.error('JSON格式错误，无法切换到表单模式')
+      return
+    }
+  }
+  showColumnJson.value = !showColumnJson.value
 }
 
 function aiSuggestColumns() {
@@ -304,6 +453,54 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .search-bar { margin-bottom: 16px; }
 .field-hint { font-size: 12px; color: #999; margin-top: 4px; }
+
+.column-editor {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.column-toolbar {
+  padding: 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.column-list {
+  padding: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.column-empty {
+  padding: 24px;
+}
+
+.column-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #91caff;
+  }
+}
+
+.column-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .column-index {
+    color: #999;
+    font-size: 12px;
+    flex: 1;
+  }
+}
+
 .version-item {
   .version-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .version-time { color: #999; font-size: 12px; }
