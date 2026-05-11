@@ -333,3 +333,63 @@ enterprise-ai-report/
 | Docker | 1 | 85 | Docker Compose |
 | 文档 | 4 | ~1,200 | Markdown |
 | **合计** | **~334** | **~21,000** | - |
+
+---
+
+## 🆕 新增文件清单 (2026-05-11)
+
+### 后端新增 (Java)
+
+**实体类**:
+- `entity/DataLineage.java` - 数据血缘追踪实体
+- `entity/ReportSchedule.java` - 定时报表实体
+- `entity/AlertRule.java` - 智能报警规则实体
+
+**Mapper**:
+- `mapper/DataLineageMapper.java`
+- `mapper/ReportScheduleMapper.java`
+- `mapper/AlertRuleMapper.java`
+
+**Service**:
+- `service/DataLineageService.java` + `impl/DataLineageServiceImpl.java`
+- `service/ReportScheduleService.java` + `impl/ReportScheduleServiceImpl.java`
+- `service/AlertRuleService.java` + `impl/AlertRuleServiceImpl.java`
+
+**Controller**:
+- `controller/DataLineageController.java` - 数据血缘API
+- `controller/ReportScheduleController.java` - 定时报表API
+- `controller/AlertRuleController.java` - 智能报警API
+- `controller/DataQualityController.java` - 数据质量API
+- `controller/DataSecurityController.java` - 数据安全API
+- `controller/ShareLinkController.java` - 分享链接API
+
+**安全层**:
+- `safety/DataMasker.java` - 数据脱敏(手机/身份证/邮箱/银行卡/姓名/地址)
+- `safety/RowLevelSecurity.java` - 行级权限控制
+
+**引擎**:
+- `engine/output/ReportDisclaimerInjector.java` - 报表免责声明注入
+
+**数据库迁移**:
+- `resources/db/migration/V2__add_lineage_schedule_comments.sql` - 6张新表
+
+### AI服务新增 (Python)
+
+- `app/services/confidence_scorer.py` - AI置信度评分服务
+
+### 前端新增 (Vue)
+
+**组件**:
+- `components/common/AiDisclaimer.vue` - AI免责声明组件
+- `components/common/DataCitation.vue` - 数据溯源引用组件
+- `components/common/CommentsSection.vue` - 协作评论组件
+- `components/common/ReportChart.vue` - 图表构建器组件
+
+**页面**:
+- `views/ai/ChatAnalysisView.vue` - 对话式分析
+- `views/ai/AlertRuleView.vue` - 智能报警规则
+- `views/config/DataLineageView.vue` - 数据血缘关系图
+- `views/config/TemplateMarketView.vue` - 模板市场
+- `views/datahub/DataQualityView.vue` - 数据质量监控
+- `views/output/ScheduledReportView.vue` - 定时报表
+- `views/output/ReportVersionView.vue` - 报表版本管理

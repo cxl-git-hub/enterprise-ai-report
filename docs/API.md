@@ -1387,3 +1387,238 @@ POST /api/ai/generate-report-template
   "format": "pdf"
 }
 ```
+
+---
+
+## 22. AI用量统计 🆕
+
+### 22.1 AI用量统计
+
+```
+GET /api/dashboard/ai-stats
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "totalCalls": 1234,
+    "totalTokens": 5678900,
+    "totalCost": 56.79,
+    "successRate": 95
+  }
+}
+```
+
+---
+
+## 23. 数据质量监控 🆕
+
+### 23.1 数据质量概览
+
+```
+GET /api/data-quality/overview
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": {
+    "totalSources": 5,
+    "healthyCount": 4,
+    "warningCount": 1,
+    "errorCount": 0,
+    "qualityScore": 80
+  }
+}
+```
+
+### 23.2 数据源健康状态
+
+```
+GET /api/data-quality/health
+```
+
+**响应**:
+```json
+{
+  "code": 200,
+  "data": [
+    {
+      "id": 1,
+      "name": "MySQL主库",
+      "type": "mysql",
+      "status": "healthy",
+      "freshness": "fresh",
+      "qualityScore": 95
+    }
+  ]
+}
+```
+
+### 23.3 执行数据源检查
+
+```
+POST /api/data-quality/check/{id}
+```
+
+---
+
+## 24. 智能报警规则 🆕
+
+### 24.1 报警规则列表
+
+```
+GET /api/alert-rules?page=1&size=20&status=active
+```
+
+### 24.2 创建报警规则
+
+```
+POST /api/alert-rules
+```
+
+**请求体**:
+```json
+{
+  "name": "销售额异常下降告警",
+  "ruleExpression": "当销售额连续3天下降超过10%时通知我",
+  "datasetId": 1,
+  "notifyChannel": "email",
+  "recipients": "admin@company.com",
+  "checkFrequencyMin": 60
+}
+```
+
+### 24.3 AI解析自然语言规则
+
+```
+POST /api/alert-rules/parse
+```
+
+**请求体**:
+```json
+{
+  "expression": "当销售额连续3天下降超过10%时通知我"
+}
+```
+
+### 24.4 测试/暂停/恢复规则
+
+```
+POST /api/alert-rules/{id}/test
+POST /api/alert-rules/{id}/pause
+POST /api/alert-rules/{id}/resume
+```
+
+---
+
+## 25. 定时报表 🆕
+
+### 25.1 定时报表列表
+
+```
+GET /api/report-schedules?page=1&size=20
+```
+
+### 25.2 创建定时任务
+
+```
+POST /api/report-schedules
+```
+
+**请求体**:
+```json
+{
+  "name": "月度经营报表",
+  "reportTemplateId": 1,
+  "format": "pdf",
+  "cronExpression": "0 9 1 * *",
+  "recipients": "cfo@company.com",
+  "includeDisclaimer": true,
+  "includeLineage": true
+}
+```
+
+### 25.3 立即执行/暂停/恢复
+
+```
+POST /api/report-schedules/{id}/execute
+POST /api/report-schedules/{id}/pause
+POST /api/report-schedules/{id}/resume
+```
+
+---
+
+## 26. 数据血缘 🆕
+
+### 26.1 获取输出的数据溯源
+
+```
+GET /api/data-lineage/output/{refType}/{refId}
+```
+
+### 26.2 获取数据集的影响分析
+
+```
+GET /api/data-lineage/dataset/{datasetId}
+```
+
+### 26.3 最近溯源记录
+
+```
+GET /api/data-lineage/recent?limit=20
+```
+
+---
+
+## 27. 数据安全 🆕
+
+### 27.1 数据脱敏
+
+```
+POST /api/data-security/mask
+```
+
+**请求体**: `{ "value": "13800138000", "fieldType": "phone" }`
+**响应**: `{ "original": "13800138000", "masked": "138****8000" }`
+
+支持的 fieldType: phone, id_card, email, bank_card, name, address
+
+### 27.2 自动检测并脱敏
+
+```
+POST /api/data-security/auto-mask
+```
+
+### 27.3 行级安全过滤器
+
+```
+GET /api/data-security/rls-filter?tableName=orders&roles=analyst
+```
+
+### 27.4 检查数据访问权限
+
+```
+POST /api/data-security/check-access
+```
+
+---
+
+## 28. 分享链接 🆕
+
+### 28.1 创建分享链接
+
+```
+POST /api/share-links
+```
+
+**请求体**: `{ "refType": "report_output", "refId": "42", "expiry": "7d" }`
+
+### 28.2 访问分享链接
+
+```
+GET /api/share-links/{refType}/{refId}?token=xxx
+```
