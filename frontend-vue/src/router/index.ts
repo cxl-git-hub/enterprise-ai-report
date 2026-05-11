@@ -52,6 +52,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '数据集管理', icon: 'TableOutlined', permission: 'dataset:read' },
       },
       {
+        path: 'datahub/quality',
+        name: 'DataQuality',
+        component: () => import('@/views/datahub/DataQualityView.vue'),
+        meta: { title: '数据质量', icon: 'SafetyCertificateOutlined', permission: 'dataset:read' },
+      },
+      {
         path: 'config/schemas',
         name: 'Schemas',
         component: () => import('@/views/config/SchemaView.vue'),
@@ -74,6 +80,18 @@ const routes: RouteRecordRaw[] = [
         name: 'ReportTemplates',
         component: () => import('@/views/config/ReportTemplateView.vue'),
         meta: { title: '报表模板', icon: 'FileSearchOutlined', permission: 'report-template:read' },
+      },
+      {
+        path: 'config/template-market',
+        name: 'TemplateMarket',
+        component: () => import('@/views/config/TemplateMarketView.vue'),
+        meta: { title: '模板市场', icon: 'ShopOutlined', permission: 'report-template:read' },
+      },
+      {
+        path: 'config/lineage',
+        name: 'DataLineage',
+        component: () => import('@/views/config/DataLineageView.vue'),
+        meta: { title: '数据血缘', icon: 'ApartmentOutlined', permission: 'schema:read' },
       },
       {
         path: 'config/consistency',
@@ -112,6 +130,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'AI分析', icon: 'BarChartOutlined', permission: 'ai:analysis' },
       },
       {
+        path: 'ai/chat',
+        name: 'ChatAnalysis',
+        component: () => import('@/views/ai/ChatAnalysisView.vue'),
+        meta: { title: '对话式分析', icon: 'MessageOutlined', permission: 'ai:analysis' },
+      },
+      {
         path: 'ai/traces',
         name: 'AiTraces',
         component: () => import('@/views/ai/TraceListView.vue'),
@@ -128,6 +152,18 @@ const routes: RouteRecordRaw[] = [
         name: 'Reports',
         component: () => import('@/views/output/ReportView.vue'),
         meta: { title: '报表输出', icon: 'DownloadOutlined', permission: 'report:read' },
+      },
+      {
+        path: 'output/scheduled',
+        name: 'ScheduledReports',
+        component: () => import('@/views/output/ScheduledReportView.vue'),
+        meta: { title: '定时报表', icon: 'ClockCircleOutlined', permission: 'report:read' },
+      },
+      {
+        path: 'output/versions',
+        name: 'ReportVersions',
+        component: () => import('@/views/output/ReportVersionView.vue'),
+        meta: { title: '版本管理', icon: 'HistoryOutlined', permission: 'report:read' },
       },
       {
         path: 'audit',

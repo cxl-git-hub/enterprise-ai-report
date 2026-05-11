@@ -60,6 +60,18 @@
           </div>
         </a-card>
 
+        <!-- AI Disclaimer -->
+        <AiDisclaimer
+          v-if="disclaimer"
+          :level="disclaimer.level"
+          :type="disclaimer.type"
+          :text="disclaimer.text"
+          :confidence="confidence?.score ?? null"
+          :sources="citationSources"
+          compact
+          style="margin-top: 16px"
+        />
+
         <!-- Generated SQL -->
         <a-card title="生成的SQL" :bordered="false" class="page-card" size="small" style="margin-top: 16px">
           <div v-if="generatedSql" class="sql-display">
@@ -70,6 +82,9 @@
                 </a-button>
                 <a-button size="small" @click="handleFormatSql">
                   <FormatPainterOutlined /> 格式化
+                </a-button>
+                <a-button size="small" @click="handleExportSql">
+                  <DownloadOutlined /> 导出SQL
                 </a-button>
               </a-space>
             </div>
@@ -101,6 +116,14 @@
           </a-space>
         </a-card>
 
+        <!-- Data Citations -->
+        <DataCitation
+          v-if="citations.length > 0"
+          :citations="citations"
+          style="margin-top: 16px"
+          @navigate="handleCitationClick"
+        />
+
         <!-- Query Results -->
         <a-card
           v-if="queryResults.length > 0"
@@ -117,6 +140,8 @@
                 <a-menu @click="handleExportResults">
                   <a-menu-item key="csv">导出 CSV</a-menu-item>
                   <a-menu-item key="json">导出 JSON</a-menu-item>
+                  <a-menu-item key="excel">导出 Excel</a-menu-item>
+                  <a-menu-item key="md">导出 Markdown</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -154,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   DatabaseOutlined,
@@ -167,9 +192,11 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import AiDisclaimer from '@/components/common/AiDisclaimer.vue'
+import DataCitation, { type Citation } from '@/components/common/DataCitation.vue'
 import { schemaApi, type Schema } from '@/api/schema'
 import { post } from '@/api/request'
-import { exportTableData } from '@/utils/export'
+import { exportTableData, exportToSql } from '@/utils/export'
 
 const schemas = ref<Schema[]>([])
 const selectedSchemaId = ref<string>('')
@@ -190,6 +217,20 @@ const trace = ref<{
   duration: number
   cost: number
 } | null>(null)
+
+// New: confidence, citations, disclaimer
+const confidence = ref<{ score: number; level: string; reasons: string[] } | null>(null)
+const citations = ref<Citation[]>([])
+const disclaimer = ref<{ text: string; level: string; type: string } | null>(null)
+
+const citationSources = computed(() =>
+  citations.value.map((c) => ({
+    label: c.sourceName,
+    datasetId: c.datasetId,
+    fields: c.fields,
+    timeRange: c.timeRange,
+  }))
+)
 
 async function handleSchemaChange(schemaId: string) {
   const schema = schemas.value.find((s) => s.id === schemaId)
@@ -212,7 +253,7 @@ async function handleGenerate() {
   }
   generating.value = true
   try {
-    const res = await post<{ data: { sql: string; trace: unknown } }>('/ai/nl2sql', {
+    const res = await post<{ data: { sql: string; trace: unknown; confidence?: any; citations?: any[]; disclaimer?: any } }>('/ai/nl2sql', {
       query: naturalQuery.value,
       dataset_ids: selectedSchemaId.value ? [selectedSchemaId.value] : undefined,
     })
@@ -220,6 +261,10 @@ async function handleGenerate() {
     if (res.data.trace) {
       trace.value = res.data.trace as typeof trace.value
     }
+    // Set new fields
+    confidence.value = res.data.confidence || null
+    citations.value = res.data.citations || []
+    disclaimer.value = res.data.disclaimer || null
     validationResult.value = null
     queryResults.value = []
   } finally {
@@ -269,7 +314,6 @@ function handleCopySql() {
 }
 
 function handleFormatSql() {
-  // Simple SQL formatting
   const sql = generatedSql.value
   const formatted = sql
     .replace(/\bSELECT\b/gi, '\nSELECT')
@@ -287,9 +331,22 @@ function handleFormatSql() {
   generatedSql.value = formatted
 }
 
+function handleExportSql() {
+  if (!generatedSql.value) return
+  exportToSql('nl2sql_' + new Date().toISOString().slice(0, 10), generatedSql.value)
+  message.success('SQL文件已导出')
+}
+
 function handleExportResults({ key }: { key: string }) {
   const cols = resultColumns.value.map((c) => c.dataIndex)
-  exportTableData('nl2sql_result_' + new Date().toISOString().slice(0, 10), cols, queryResults.value, key as 'csv' | 'json')
+  exportTableData('nl2sql_result_' + new Date().toISOString().slice(0, 10), cols, queryResults.value, key as 'csv' | 'json' | 'excel' | 'md')
+}
+
+function handleCitationClick(cite: Citation) {
+  // Navigate to dataset detail or show source info
+  if (cite.datasetId) {
+    message.info(`数据来源: ${cite.sourceName}`)
+  }
 }
 
 onMounted(async () => {

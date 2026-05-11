@@ -39,6 +39,16 @@
       </a-col>
 
       <a-col :xs="24" :md="16">
+        <!-- AI Disclaimer -->
+        <AiDisclaimer
+          v-if="disclaimer"
+          :level="disclaimer.level"
+          :type="disclaimer.type"
+          :text="disclaimer.text"
+          :confidence="confidence?.score ?? null"
+          :sources="citationSources"
+        />
+
         <a-card title="分析结果" :bordered="false" class="page-card">
           <div v-if="analyzing" class="analyzing-state">
             <a-spin size="large" />
@@ -54,9 +64,37 @@
                     <a-menu-item key="csv">导出数据 CSV</a-menu-item>
                     <a-menu-item key="json">导出完整结果 JSON</a-menu-item>
                     <a-menu-item key="md">导出报告 Markdown</a-menu-item>
+                    <a-menu-item key="excel">导出 Excel</a-menu-item>
                   </a-menu>
                 </template>
               </a-dropdown>
+            </div>
+
+            <!-- Confidence Score -->
+            <div v-if="confidence" class="confidence-section">
+              <a-row :gutter="16">
+                <a-col :span="8">
+                  <a-statistic
+                    title="AI置信度"
+                    :value="confidence.score"
+                    suffix="%"
+                    :value-style="{ color: confidenceColor }"
+                  >
+                    <template #prefix>
+                      <SafetyOutlined />
+                    </template>
+                  </a-statistic>
+                </a-col>
+                <a-col :span="16">
+                  <div class="confidence-reasons">
+                    <div v-for="(reason, idx) in confidence.reasons" :key="idx" class="reason-item">
+                      <CheckCircleOutlined v-if="confidence.score >= 70" style="color: #52c41a" />
+                      <ExclamationCircleOutlined v-else style="color: #faad14" />
+                      {{ reason }}
+                    </div>
+                  </div>
+                </a-col>
+              </a-row>
             </div>
 
             <!-- Narrative -->
@@ -91,6 +129,13 @@
               </a-list>
             </div>
 
+            <!-- Data Citations -->
+            <DataCitation
+              v-if="citations.length > 0"
+              :citations="citations"
+              style="margin-top: 16px"
+            />
+
             <!-- Trace -->
             <a-collapse style="margin-top: 16px">
               <a-collapse-panel key="trace" header="AI执行详情">
@@ -111,13 +156,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { ThunderboltOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import {
+  ThunderboltOutlined,
+  DownloadOutlined,
+  SafetyOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import AiDisclaimer from '@/components/common/AiDisclaimer.vue'
+import DataCitation, { type Citation } from '@/components/common/DataCitation.vue'
 import { datasetApi, type Dataset } from '@/api/dataset'
 import { post } from '@/api/request'
-import { exportTableData } from '@/utils/export'
+import { exportTableData, exportWithDisclaimer } from '@/utils/export'
 import * as echarts from 'echarts'
 
 const datasets = ref<Dataset[]>([])
@@ -126,6 +179,27 @@ const analysisType = ref<string>('trend')
 const analysisPrompt = ref('')
 const analyzing = ref(false)
 const chartRef = ref<HTMLElement>()
+
+// Confidence, citations, disclaimer
+const confidence = ref<{ score: number; level: string; reasons: string[] } | null>(null)
+const citations = ref<Citation[]>([])
+const disclaimer = ref<{ text: string; level: string; type: string } | null>(null)
+
+const confidenceColor = computed(() => {
+  if (!confidence.value) return '#999'
+  if (confidence.value.score >= 80) return '#52c41a'
+  if (confidence.value.score >= 60) return '#faad14'
+  return '#ff4d4f'
+})
+
+const citationSources = computed(() =>
+  citations.value.map((c) => ({
+    label: c.sourceName,
+    datasetId: c.datasetId,
+    fields: c.fields,
+    timeRange: c.timeRange,
+  }))
+)
 
 interface Finding {
   type: 'positive' | 'negative' | 'neutral'
@@ -149,13 +223,19 @@ async function handleAnalyze() {
   }
   analyzing.value = true
   analysisResult.value = null
+  confidence.value = null
+  citations.value = []
+  disclaimer.value = null
   try {
-    const res = await post<{ data: AnalysisResult }>('/ai/analysis', {
+    const res = await post<{ data: AnalysisResult & { confidence?: any; citations?: any[]; disclaimer?: any } }>('/ai/analysis', {
       dataset_ids: [selectedDatasetId.value],
       analysis_type: analysisType.value,
       query: analysisPrompt.value,
     })
     analysisResult.value = res.data
+    confidence.value = res.data.confidence || null
+    citations.value = res.data.citations || []
+    disclaimer.value = res.data.disclaimer || null
     await nextTick()
     if (res.data.chartData) {
       renderChart(res.data.chartData)
@@ -186,6 +266,8 @@ function renderChart(chartData: AnalysisResult['chartData']) {
 
 function handleExportAnalysis({ key }: { key: string }) {
   if (!analysisResult.value) return
+  const disclaimerText = '本报告由 AI 辅助生成，数据仅供参考，请以原始数据源为准。'
+
   if (key === 'json') {
     exportTableData('analysis_' + new Date().toISOString().slice(0, 10), [], [analysisResult.value], 'json')
   } else if (key === 'md') {
@@ -195,8 +277,16 @@ function handleExportAnalysis({ key }: { key: string }) {
       description: f.description,
     }))
     exportTableData('analysis_findings_' + new Date().toISOString().slice(0, 10), ['type', 'title', 'description'], findings, 'md')
+  } else if (key === 'excel' && analysisResult.value.chartData) {
+    const { categories, series } = analysisResult.value.chartData
+    const rows = categories.map((cat, i) => {
+      const row: Record<string, unknown> = { category: cat }
+      series.forEach((s) => (row[s.name] = s.data[i]))
+      return row
+    })
+    const cols = ['category', ...series.map((s) => s.name)]
+    exportWithDisclaimer('analysis_data_' + new Date().toISOString().slice(0, 10), cols, rows, 'excel', disclaimerText)
   } else {
-    // CSV of chart data
     if (analysisResult.value.chartData) {
       const { categories, series } = analysisResult.value.chartData
       const rows = categories.map((cat, i) => {
@@ -224,6 +314,25 @@ onMounted(async () => {
   padding: 60px 0;
 
   p { margin-top: 16px; color: #999; }
+}
+
+.confidence-section {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+
+  .confidence-reasons {
+    .reason-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+  }
 }
 
 .analysis-narrative {

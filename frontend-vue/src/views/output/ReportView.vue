@@ -47,32 +47,102 @@
               :text="record.status === 1 ? '已完成' : record.status === 0 ? '生成中' : '未知'"
             />
           </template>
-          <template v-if="column.key === 'action'">
-            <a-button
-              type="link"
-              size="small"
-              @click="handleDownload(record)"
-              :loading="downloadingId === record.id"
-              :disabled="record.status !== 'completed'"
-            >
-              <DownloadOutlined /> 下载
+          <template v-if="column.key === 'lineage'">
+            <a-button type="link" size="small" @click="showLineage(record)">
+              <NodeIndexOutlined /> 溯源
             </a-button>
+          </template>
+          <template v-if="column.key === 'action'">
+            <a-space>
+              <a-button
+                type="link"
+                size="small"
+                @click="handleDownload(record)"
+                :loading="downloadingId === record.id"
+                :disabled="record.status !== 1"
+              >
+                <DownloadOutlined /> 下载
+              </a-button>
+              <a-button
+                type="link"
+                size="small"
+                @click="handleShare(record)"
+              >
+                <ShareAltOutlined /> 分享
+              </a-button>
+            </a-space>
           </template>
         </template>
       </a-table>
     </a-card>
+
+    <!-- Lineage Drawer -->
+    <a-drawer
+      v-model:open="lineageVisible"
+      title="数据溯源"
+      width="500"
+    >
+      <DataCitation v-if="lineageData.length" :citations="lineageData" />
+      <a-empty v-else description="暂无溯源数据" />
+    </a-drawer>
+
+    <!-- Share Modal -->
+    <a-modal
+      v-model:open="shareModalVisible"
+      title="分享报表"
+      @ok="handleShareConfirm"
+      width="400px"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="分享链接">
+          <a-input :value="shareLink" disabled>
+            <template #suffix>
+              <a-button type="link" size="small" @click="copyShareLink">
+                <CopyOutlined /> 复制
+              </a-button>
+            </template>
+          </a-input>
+        </a-form-item>
+        <a-form-item label="有效期">
+          <a-select v-model:value="shareExpiry" style="width: 100%">
+            <a-select-option value="1d">1天</a-select-option>
+            <a-select-option value="7d">7天</a-select-option>
+            <a-select-option value="30d">30天</a-select-option>
+            <a-select-option value="forever">永久</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item>
+          <a-checkbox v-model:checked="shareIncludeDisclaimer">附带AI免责声明</a-checkbox>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { SearchOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import {
+  SearchOutlined,
+  DownloadOutlined,
+  NodeIndexOutlined,
+  ShareAltOutlined,
+  CopyOutlined,
+} from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import DataCitation, { type Citation } from '@/components/common/DataCitation.vue'
 import { useTable } from '@/composables/useTable'
 import { reportOutputApi, type ReportOutput } from '@/api/report-output'
+import { get } from '@/api/request'
 
 const downloadingId = ref<string | null>(null)
+const lineageVisible = ref(false)
+const lineageData = ref<Citation[]>([])
+const shareModalVisible = ref(false)
+const shareLink = ref('')
+const shareExpiry = ref('7d')
+const shareIncludeDisclaimer = ref(true)
+const currentShareRecord = ref<ReportOutput | null>(null)
 
 const formatColor: Record<string, string> = {
   pdf: 'red',
@@ -94,7 +164,8 @@ const columns = [
   { title: '文件大小', dataIndex: 'fileSize', key: 'fileSize', width: 120 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '生成时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 120, fixed: 'right' as const },
+  { title: '数据溯源', key: 'lineage', width: 90 },
+  { title: '操作', key: 'action', width: 160, fixed: 'right' as const },
 ]
 
 function formatFileSize(bytes: number): string {
@@ -124,6 +195,46 @@ async function handleDownload(record: ReportOutput) {
     downloadingId.value = null
   }
 }
+
+async function showLineage(record: ReportOutput) {
+  try {
+    const res = await get<{ data: any[] }>(`/data-lineage/output/report_output/${record.id}`)
+    lineageData.value = (res?.data || []).map((item: any) => ({
+      sourceName: item.sourceName || `数据集 #${item.datasetId}`,
+      datasetId: item.datasetId,
+      schemaId: item.schemaId,
+      fields: item.fields ? item.fields.split(',') : [],
+      timeRange: item.timeRange,
+      rowCount: item.rowCount,
+      lastUpdated: item.createdAt,
+      quality: item.quality,
+    }))
+    lineageVisible.value = true
+  } catch {
+    lineageData.value = []
+    lineageVisible.value = true
+  }
+}
+
+function handleShare(record: ReportOutput) {
+  currentShareRecord.value = record
+  shareLink.value = `${window.location.origin}/report/shared/${record.id}?token=${Date.now().toString(36)}`
+  shareModalVisible.value = true
+}
+
+function handleShareConfirm() {
+  message.success('分享链接已生成')
+  shareModalVisible.value = false
+}
+
+function copyShareLink() {
+  navigator.clipboard.writeText(shareLink.value)
+  message.success('链接已复制到剪贴板')
+}
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style lang="scss" scoped>
