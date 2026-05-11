@@ -50,6 +50,9 @@
           </template>
           <a-menu-item key="/datahub/datasources">数据源管理</a-menu-item>
           <a-menu-item key="/datahub/datasets">数据集管理</a-menu-item>
+          <a-menu-item key="/datahub/quality">
+            <SafetyCertificateOutlined /> 数据质量
+          </a-menu-item>
         </a-sub-menu>
 
         <a-sub-menu key="config">
@@ -61,6 +64,12 @@
           <a-menu-item key="/config/kpis">KPI管理</a-menu-item>
           <a-menu-item key="/config/prompts">提示词模板</a-menu-item>
           <a-menu-item key="/config/report-templates">报表模板</a-menu-item>
+          <a-menu-item key="/config/template-market">
+            <ShopOutlined /> 模板市场
+          </a-menu-item>
+          <a-menu-item key="/config/lineage">
+            <ApartmentOutlined /> 数据血缘
+          </a-menu-item>
           <a-menu-item key="/config/consistency">配置一致性</a-menu-item>
         </a-sub-menu>
 
@@ -80,13 +89,28 @@
           </template>
           <a-menu-item key="/ai/nl2sql">NL2SQL</a-menu-item>
           <a-menu-item key="/ai/analysis">AI分析</a-menu-item>
+          <a-menu-item key="/ai/chat">
+            <MessageOutlined /> 对话式分析
+          </a-menu-item>
+          <a-menu-item key="/ai/alerts">
+            <AlertOutlined /> 智能报警
+          </a-menu-item>
           <a-menu-item key="/ai/traces">执行追踪</a-menu-item>
         </a-sub-menu>
 
-        <a-menu-item key="/output/reports">
-          <DownloadOutlined />
-          <span>报表输出</span>
-        </a-menu-item>
+        <a-sub-menu key="output">
+          <template #title>
+            <DownloadOutlined />
+            <span>报表输出</span>
+          </template>
+          <a-menu-item key="/output/reports">报表列表</a-menu-item>
+          <a-menu-item key="/output/scheduled">
+            <ClockCircleOutlined /> 定时报表
+          </a-menu-item>
+          <a-menu-item key="/output/versions">
+            <HistoryOutlined /> 版本管理
+          </a-menu-item>
+        </a-sub-menu>
 
         <a-menu-item key="/audit">
           <AuditOutlined />
@@ -166,6 +190,12 @@ import {
   AuditOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SafetyCertificateOutlined,
+  ShopOutlined,
+  MessageOutlined,
+  AlertOutlined,
+  ClockCircleOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons-vue'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
@@ -191,7 +221,10 @@ function checkMobile() {
 onMounted(() => window.addEventListener('resize', checkMobile))
 onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
-const contentMargin = computed(() => appStore.sidebarCollapsed ? '80px' : '256px')
+const contentMargin = computed(() => {
+  if (isMobile.value) return '0px'
+  return appStore.sidebarCollapsed ? '80px' : '256px'
+})
 
 const breadcrumbs = computed(() => {
   const matched = route.matched.filter((item) => item.meta?.title)
@@ -215,7 +248,6 @@ watch(
 
 function handleMenuClick({ key }: { key: string }) {
   router.push(key)
-  // Auto-close sidebar on mobile
   if (isMobile.value) {
     appStore.sidebarCollapsed = true
   }
@@ -234,26 +266,14 @@ function handleUserMenuClick({ key }: { key: string }) {
 
 function handleGlobalSearch(value: string) {
   if (!value.trim()) return
-  // Search through menu items
   const searchMap: Record<string, string> = {
-    '数据源': '/datahub/datasources',
-    '数据集': '/datahub/datasets',
-    'Schema': '/config/schemas',
-    'KPI': '/config/kpis',
-    '提示词': '/config/prompts',
-    '模板': '/config/report-templates',
-    '一致性': '/config/consistency',
-    '工作流': '/workflow/definitions',
-    '运行': '/workflow/runs',
-    'NL2SQL': '/ai/nl2sql',
-    '分析': '/ai/analysis',
-    '追踪': '/ai/traces',
-    '报表': '/output/reports',
-    '审计': '/audit',
-    '用户': '/admin/users',
-    '租户': '/admin/tenants',
-    '角色': '/admin/roles',
-    '仪表盘': '/dashboard',
+    '数据源': '/datahub/datasources', '数据集': '/datahub/datasets', '数据质量': '/datahub/quality',
+    'Schema': '/config/schemas', 'KPI': '/config/kpis', '提示词': '/config/prompts',
+    '模板': '/config/report-templates', '模板市场': '/config/template-market', '血缘': '/config/lineage',
+    '一致性': '/config/consistency', '工作流': '/workflow/definitions', '运行': '/workflow/runs',
+    'NL2SQL': '/ai/nl2sql', '分析': '/ai/analysis', '对话': '/ai/chat', '报警': '/ai/alerts',
+    '追踪': '/ai/traces', '报表': '/output/reports', '定时': '/output/scheduled', '版本': '/output/versions',
+    '审计': '/audit', '用户': '/admin/users', '租户': '/admin/tenants', '角色': '/admin/roles', '仪表盘': '/dashboard',
   }
   const keyword = value.toLowerCase()
   for (const [key, path] of Object.entries(searchMap)) {
@@ -380,7 +400,6 @@ function handleGlobalSearch(value: string) {
   opacity: 0;
 }
 
-// Mobile overlay
 .mobile-overlay {
   position: fixed;
   top: 0;
@@ -391,7 +410,6 @@ function handleGlobalSearch(value: string) {
   z-index: 9;
 }
 
-// Mobile responsive
 @media (max-width: 768px) {
   .main-sider.mobile-sider {
     position: fixed !important;

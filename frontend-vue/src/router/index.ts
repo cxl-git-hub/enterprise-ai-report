@@ -142,6 +142,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'AI执行追踪', icon: 'EyeOutlined', permission: 'ai:trace' },
       },
       {
+        path: 'ai/alerts',
+        name: 'AlertRules',
+        component: () => import('@/views/ai/AlertRuleView.vue'),
+        meta: { title: '智能报警', icon: 'AlertOutlined', permission: 'ai:analysis' },
+      },
+      {
         path: 'ai/traces/:traceId',
         name: 'AiTraceDetail',
         component: () => import('@/views/ai/TraceDetailView.vue'),

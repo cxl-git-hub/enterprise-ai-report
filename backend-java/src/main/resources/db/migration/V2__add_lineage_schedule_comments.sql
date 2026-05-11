@@ -111,3 +111,33 @@ CREATE TABLE IF NOT EXISTS share_link (
     INDEX idx_token (token),
     INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- 6. Alert Rules Table
+-- Natural language alert rules
+-- ============================================
+CREATE TABLE IF NOT EXISTS alert_rule (
+    id BIGINT PRIMARY KEY,
+    tenant_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    rule_expression TEXT NOT NULL COMMENT 'Natural language rule description',
+    parsed_config TEXT COMMENT 'Parsed monitoring config (JSON)',
+    dataset_id BIGINT COMMENT 'Associated dataset ID',
+    kpi_id BIGINT COMMENT 'Associated KPI ID',
+    notify_channel VARCHAR(20) DEFAULT 'inapp' COMMENT 'Alert channel: email/webhook/inapp',
+    recipients TEXT COMMENT 'Notification recipients',
+    webhook_url VARCHAR(500) COMMENT 'Webhook URL',
+    check_frequency_min INT DEFAULT 60 COMMENT 'Check frequency in minutes',
+    status VARCHAR(20) DEFAULT 'active' COMMENT 'Status: active/paused/triggered',
+    last_check_at DATETIME COMMENT 'Last check time',
+    last_trigger_at DATETIME COMMENT 'Last trigger time',
+    trigger_count INT DEFAULT 0 COMMENT 'Trigger count',
+    last_result VARCHAR(100) COMMENT 'Last evaluation result',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT(1) DEFAULT 0,
+    INDEX idx_tenant (tenant_id),
+    INDEX idx_status (status),
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
