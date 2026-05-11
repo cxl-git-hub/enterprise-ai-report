@@ -334,7 +334,7 @@ async function handleDelete(id: string) {
 }
 
 onMounted(async () => {
-  fetchData()
+  // useTable already calls fetchData on mount
   try {
     const res = await datasetApi.list({ page: 1, pageSize: 100 })
     datasets.value = res.data.items

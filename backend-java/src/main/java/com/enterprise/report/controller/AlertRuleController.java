@@ -7,8 +7,10 @@ import com.enterprise.report.dto.PageResult;
 import com.enterprise.report.entity.AlertRule;
 import com.enterprise.report.exception.BusinessException;
 import com.enterprise.report.security.TenantContext;
+import com.enterprise.report.security.UserDetailsImpl;
 import com.enterprise.report.service.AlertRuleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -42,10 +44,11 @@ public class AlertRuleController {
     }
 
     @PostMapping
-    public ApiResponse<AlertRule> create(@RequestBody AlertRule rule) {
+    public ApiResponse<AlertRule> create(@RequestBody AlertRule rule,
+                                         @AuthenticationPrincipal UserDetailsImpl user) {
         Long tenantId = TenantContext.getTenantId();
         rule.setTenantId(tenantId);
-        rule.setUserId(TenantContext.getTenantId()); // Simplified
+        rule.setUserId(user.getId());
         rule.setStatus("active");
         rule.setTriggerCount(0);
 

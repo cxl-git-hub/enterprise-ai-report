@@ -25,6 +25,7 @@ class AnalysisService:
         sql: Optional[str] = None,
         analysis_type: str = "general",
         output_format: str = "json",
+        context: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Execute the analysis pipeline."""
         trace = await self.trace_service.create_trace(
@@ -43,6 +44,7 @@ class AnalysisService:
                 sql=sql,
                 analysis_type=analysis_type,
                 output_format=output_format,
+                context=context,
             )
 
             graph = create_analysis_graph(self.db)

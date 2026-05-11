@@ -32,6 +32,7 @@ class AnalysisRequest(BaseModel):
     sql: Optional[str] = Field(None, description="Pre-generated SQL to use")
     analysis_type: str = Field("general", description="Type of analysis: general, trend, comparison, anomaly")
     output_format: str = Field("json", description="Output format: json, chart_config")
+    context: Optional[List[str]] = Field(None, description="Previous conversation context for multi-turn analysis")
 
 
 class AnalysisResponse(BaseModel):

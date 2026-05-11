@@ -15,6 +15,7 @@ class AnalysisState(TypedDict, total=False):
     sql: Optional[str]
     analysis_type: str
     output_format: str
+    context: Optional[List[str]]  # Multi-turn conversation context
 
     # Data context
     schema_context: str

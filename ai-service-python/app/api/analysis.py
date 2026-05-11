@@ -28,6 +28,7 @@ async def analyze_data(
         sql=request.sql,
         analysis_type=request.analysis_type,
         output_format=request.output_format,
+        context=request.context,
     )
 
     if not result.get("success"):

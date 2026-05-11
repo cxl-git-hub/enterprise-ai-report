@@ -282,9 +282,9 @@ async function handleDelete(id: string) {
 }
 
 onMounted(async () => {
-  fetchData()
+  // useTable already calls fetchData on mount
   try {
-    const res = await get<{ data: { items: any[] } }>('/report-templates', { page: 1, pageSize: 100 })
+    const res = await get<{ data: { items: any[] } }>('/report-templates', { page: 1, size: 100 })
     templates.value = res?.data?.items || []
   } catch {}
 })

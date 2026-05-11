@@ -146,7 +146,7 @@ async function fetchData() {
   loading.value = true
   try {
     // Load from config snapshots as version history
-    const res = await get<{ data: { items: any[] } }>('/config/snapshots', { page: 1, pageSize: 50 })
+    const res = await get<{ data: { items: any[] } }>('/config/snapshots', { page: 1, size: 50 })
     versions.value = (res?.data?.items || []).map((snap: any, idx: number, arr: any[]) => ({
       versionId: snap.id,
       reportId: snap.id,
@@ -201,7 +201,7 @@ function handleRollback(record: ReportVersion) {
     content: `确定要回滚到 v${record.version} 吗？当前版本将被保存为新版本。`,
     onOk: async () => {
       try {
-        await post(`/config/snapshots/${record.versionId}/rollback`, {})
+        await post(`/config/snapshots/${record.versionId}/restore`, {})
         message.success('回滚成功')
         fetchData()
       } catch {

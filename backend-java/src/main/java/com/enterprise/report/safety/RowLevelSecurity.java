@@ -1,9 +1,5 @@
 package com.enterprise.report.safety;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.enterprise.report.entity.SysRole;
-import com.enterprise.report.mapper.SysRoleMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -15,10 +11,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class RowLevelSecurity {
-
-    private final SysRoleMapper roleMapper;
 
     /**
      * Build SQL WHERE clause for row-level security based on user context.

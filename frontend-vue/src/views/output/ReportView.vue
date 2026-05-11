@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   SearchOutlined,
@@ -232,9 +232,7 @@ function copyShareLink() {
   message.success('链接已复制到剪贴板')
 }
 
-onMounted(() => {
-  fetchData()
-})
+// useTable already calls fetchData on mount
 </script>
 
 <style lang="scss" scoped>
