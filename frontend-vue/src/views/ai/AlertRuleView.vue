@@ -275,7 +275,7 @@ async function handleParse() {
   }
   parsing.value = true
   try {
-    const res = await post<{ data: string }>('/alert-rules/parse', formState.ruleExpression)
+    const res = await post<{ data: string }>('/alert-rules/parse', { expression: formState.ruleExpression })
     parsedConfig.value = JSON.parse(res.data)
   } catch {
     message.error('解析失败')

@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/alert-rules")
 @RequiredArgsConstructor
@@ -117,7 +119,8 @@ public class AlertRuleController {
      * Parse a natural language rule expression without saving.
      */
     @PostMapping("/parse")
-    public ApiResponse<String> parse(@RequestBody String expression) {
+    public ApiResponse<String> parse(@RequestBody Map<String, String> body) {
+        String expression = body.getOrDefault("expression", "");
         String parsed = alertRuleService.parseRuleExpression(expression);
         return ApiResponse.success(parsed);
     }

@@ -61,6 +61,10 @@ async def analyze_data(
 
     result["citations"] = citations
 
+    # Add chartData alias for frontend compatibility (backend uses chart_config)
+    if result.get("chart_config") and not result.get("chartData"):
+        result["chartData"] = result["chart_config"]
+
     # Add disclaimer
     result["disclaimer"] = {
         "text": "以下分析结论由 AI 基于数据自动生成，仅供参考。AI 可能无法完全理解业务上下文，请结合实际业务判断。重要决策请核实原始数据。",

@@ -58,9 +58,9 @@ public class ConfigConsistencyController {
     @GetMapping("/snapshots")
     public ApiResponse<PageResult<ConfigSnapshot>> listSnapshots(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer pageSize) {
+            @RequestParam(defaultValue = "20") Integer size) {
         Long tenantId = TenantContext.getTenantId();
-        return ApiResponse.success(configConsistencyService.getSnapshots(tenantId, page, pageSize));
+        return ApiResponse.success(configConsistencyService.getSnapshots(tenantId, page, size));
     }
 
     /**
