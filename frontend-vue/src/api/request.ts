@@ -25,6 +25,10 @@ instance.interceptors.request.use(
     if (tenantId) {
       config.headers['X-Tenant-Id'] = tenantId
     }
+    // Auto-map pageSize to size for backend compatibility
+    if (config.params && config.params.pageSize !== undefined && config.params.size === undefined) {
+      config.params.size = config.params.pageSize
+    }
     return config
   },
   (error) => {

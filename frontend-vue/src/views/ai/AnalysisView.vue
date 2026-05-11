@@ -302,7 +302,7 @@ function handleExportAnalysis({ key }: { key: string }) {
 
 onMounted(async () => {
   try {
-    const res = await datasetApi.list({ page: 1, pageSize: 100 })
+    const res = await datasetApi.list({ page: 1, size: 100 })
     datasets.value = res.data.items
   } catch {}
 })

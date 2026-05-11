@@ -133,7 +133,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import DataCitation, { type Citation } from '@/components/common/DataCitation.vue'
 import { useTable } from '@/composables/useTable'
 import { reportOutputApi, type ReportOutput } from '@/api/report-output'
-import { get } from '@/api/request'
+import { get, post } from '@/api/request'
 
 const downloadingId = ref<string | null>(null)
 const lineageVisible = ref(false)
@@ -216,9 +216,19 @@ async function showLineage(record: ReportOutput) {
   }
 }
 
-function handleShare(record: ReportOutput) {
+async function handleShare(record: ReportOutput) {
   currentShareRecord.value = record
-  shareLink.value = `${window.location.origin}/report/shared/${record.id}?token=${Date.now().toString(36)}`
+  try {
+    const res = await post<{ data: { url: string; token: string } }>('/share-links', {
+      refType: 'report_output',
+      refId: record.id,
+      expiry: '7d',
+      includeDisclaimer: shareIncludeDisclaimer.value,
+    })
+    shareLink.value = `${window.location.origin}${res.data.url}`
+  } catch {
+    shareLink.value = `${window.location.origin}/report/shared/${record.id}?token=${Date.now().toString(36)}`
+  }
   shareModalVisible.value = true
 }
 

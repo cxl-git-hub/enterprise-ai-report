@@ -47,7 +47,7 @@ function mapDatasetFromBackend(d: any): Dataset {
 
 export const datasetApi = {
   list: async (params: { page: number; pageSize: number; keyword?: string }) => {
-    const res = await get<{ data: { items: any[]; total: number } }>('/datasets', params)
+    const res = await get<{ data: { items: any[]; total: number } }>('/datasets', { ...params, size: params.pageSize })
     return {
       ...res,
       data: {

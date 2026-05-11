@@ -224,7 +224,7 @@ function handleDownloadVersion(record: ReportVersion) {
 onMounted(() => {
   fetchData()
   // Load reports list
-  get<{ data: { items: any[] } }>('/report-templates', { page: 1, pageSize: 100 }).then(res => {
+  get<{ data: { items: any[] } }>('/report-templates', { page: 1, size: 100 }).then(res => {
     reports.value = (res?.data?.items || []).map((t: any) => ({ id: t.id, name: t.name }))
   }).catch(() => {})
 })

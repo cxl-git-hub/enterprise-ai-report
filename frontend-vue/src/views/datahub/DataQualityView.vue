@@ -120,7 +120,7 @@ import { ref, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { ThunderboltOutlined, ExclamationOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { get } from '@/api/request'
+import { get, post } from '@/api/request'
 
 interface HealthRecord {
   id: string
@@ -153,17 +153,10 @@ const checking = ref(false)
 const checkingIds = ref<string[]>([])
 const lastCheckTime = ref('5分钟前')
 
-const healthData = ref<HealthRecord[]>([
-  { id: '1', name: 'MySQL主库-订单', type: 'MySQL', status: 'healthy', freshness: 'fresh', qualityScore: 95, lastCheck: '2分钟前', rowCount: 1234567, nullRate: 0.02 },
-  { id: '2', name: 'ClickHouse-日志', type: 'ClickHouse', status: 'warning', freshness: 'stale', qualityScore: 78, lastCheck: '1小时前', rowCount: 9876543, nullRate: 0.15 },
-  { id: '3', name: 'PostgreSQL-用户', type: 'PostgreSQL', status: 'healthy', freshness: 'fresh', qualityScore: 92, lastCheck: '5分钟前', rowCount: 456789, nullRate: 0.03 },
-  { id: '4', name: 'MongoDB-行为', type: 'MongoDB', status: 'error', freshness: 'expired', qualityScore: 45, lastCheck: '3小时前', rowCount: 5678901, nullRate: 0.28 },
-])
+const healthData = ref<HealthRecord[]>([])
 
 const alerts = ref<Alert[]>([
-  { id: '1', level: 'error', title: 'MongoDB-行为数据过期', description: '数据最后更新时间超过3小时，可能影响分析准确性', time: '10分钟前' },
-  { id: '2', level: 'warning', title: 'ClickHouse空值率升高', description: 'user_id字段空值率从2%升至15%', time: '30分钟前' },
-  { id: '3', level: 'warning', title: '订单表数据量异常', description: '今日数据量较昨日下降40%', time: '1小时前' },
+  { id: '1', level: 'warning', title: '数据质量检查', description: '点击"执行全部检查"按钮开始检测数据源健康状态', time: '系统提示' },
 ])
 
 const qualityRules = ref<QualityRule[]>([
@@ -204,10 +197,12 @@ const healthColumns = [
 async function runAllChecks() {
   checking.value = true
   try {
-    // Simulate check
-    await new Promise(r => setTimeout(r, 2000))
+    const res = await get<{ data: HealthRecord[] }>('/data-quality/health')
+    if (res?.data) healthData.value = res.data
     lastCheckTime.value = '刚刚'
     message.success('全部检查完成')
+  } catch {
+    message.error('检查失败')
   } finally {
     checking.value = false
   }
@@ -216,10 +211,12 @@ async function runAllChecks() {
 async function runCheck(id: string) {
   checkingIds.value.push(id)
   try {
-    await new Promise(r => setTimeout(r, 1000))
+    await post(`/data-quality/check/${id}`, {})
     const record = healthData.value.find(h => h.id === id)
     if (record) record.lastCheck = '刚刚'
     message.success(`数据源检查完成`)
+  } catch {
+    message.error('检查失败')
   } finally {
     checkingIds.value = checkingIds.value.filter(i => i !== id)
   }
@@ -230,8 +227,11 @@ function toggleRule(id: string, enabled: boolean) {
   if (rule) rule.enabled = enabled
 }
 
-onMounted(() => {
-  // Load real data from backend
+onMounted(async () => {
+  try {
+    const res = await get<{ data: HealthRecord[] }>('/data-quality/health')
+    if (res?.data) healthData.value = res.data
+  } catch {}
 })
 </script>
 

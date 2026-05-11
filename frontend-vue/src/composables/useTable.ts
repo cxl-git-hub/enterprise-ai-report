@@ -38,6 +38,7 @@ export function useTable<T extends Record<string, any>>(options: UseTableOptions
       const params: Record<string, unknown> = {
         page: pagination.current,
         pageSize: pagination.pageSize,
+        size: pagination.pageSize,  // Backend uses 'size', not 'pageSize'
       }
       // Merge search params, removing empty values
       Object.entries(searchParams).forEach(([key, value]) => {

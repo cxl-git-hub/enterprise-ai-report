@@ -351,7 +351,7 @@ function handleCitationClick(cite: Citation) {
 
 onMounted(async () => {
   try {
-    const res = await schemaApi.list({ page: 1, pageSize: 100 })
+    const res = await schemaApi.list({ page: 1, size: 100 })
     schemas.value = res.data.items
   } catch {}
 })

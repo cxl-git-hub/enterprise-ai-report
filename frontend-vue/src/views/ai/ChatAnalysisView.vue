@@ -311,7 +311,7 @@ function handleExportChat({ key }: { key: string }) {
 onMounted(async () => {
   startNewConversation()
   try {
-    const res = await datasetApi.list({ page: 1, pageSize: 100 })
+    const res = await datasetApi.list({ page: 1, size: 100 })
     datasets.value = res.data.items
   } catch {}
 })
